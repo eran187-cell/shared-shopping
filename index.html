@@ -760,12 +760,6 @@ function buildCard(item){
     +'<button class="ctrl-del" data-action="delete" title="מחיקה">✕</button>';
 
   card.appendChild(chk);card.appendChild(info);
-  if(m){
-    const ad=document.createElement('div');
-    ad.className='adot';ad.style.background=m.color;
-    ad.title=m.name;ad.textContent=initials(m.name);
-    card.appendChild(ad);
-  }
   card.appendChild(ctrl);
   return card;
 }
