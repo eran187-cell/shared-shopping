@@ -173,11 +173,15 @@ a,button,input,select{touch-action:manipulation}
 .qty-badge{background:var(--bg);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600;color:var(--txt)}
 .who-badge{padding:1px 8px;border-radius:6px;font-size:11px;font-weight:600;color:#fff}
 .adot{width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.delbtn{width:36px;height:36px;border-radius:8px;border:none;background:transparent;color:var(--mut);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;opacity:0}
-.item-card:hover .delbtn{opacity:1}
-.delbtn:active{background:#fdecea;color:var(--red)}
-/* on touch devices show delete button always (no hover) */
-@media(hover:none){.delbtn{opacity:.35}}
+.item-ctrl{display:flex;flex-direction:column;gap:3px;flex-shrink:0;align-self:center}
+.ctrl-btn{width:28px;height:25px;border-radius:7px;border:1.5px solid var(--bdr);background:transparent;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,transform .1s;line-height:1;flex-shrink:0}
+.ctrl-btn:active{transform:scale(.88)}
+.ctrl-inc{color:var(--pri);border-color:var(--pri)}
+.ctrl-inc:active{background:var(--pril)}
+.ctrl-dec{color:var(--txt);opacity:.65}
+.ctrl-dec:active{background:var(--bg)}
+.ctrl-del{color:var(--red);border-color:rgba(231,76,60,.35);opacity:.8}
+.ctrl-del:active{background:#fdecea}
 
 .empty-list{text-align:center;padding:60px 20px;color:var(--mut)}
 .empty-list .ei{font-size:48px;margin-bottom:12px}
@@ -726,8 +730,11 @@ function buildCard(item){
   info.innerHTML='<div class="iname">'+esc(item.name)+'</div>'
     +'<div class="imeta"><span class="qty-badge">'+esc(String(item.qty))+' '+esc(item.unit)+'</span>'+whoHtml+'</div>';
 
-  const del=document.createElement('button');
-  del.className='delbtn';del.dataset.action='delete';del.title='הסר';del.textContent='✕';
+  const ctrl=document.createElement('div');
+  ctrl.className='item-ctrl';
+  ctrl.innerHTML='<button class="ctrl-btn ctrl-inc" data-action="increase" title="הוסף">+</button>'
+    +'<button class="ctrl-btn ctrl-dec" data-action="decrease" title="הפחת">−</button>'
+    +'<button class="ctrl-btn ctrl-del" data-action="delete" title="מחיקה">✕</button>';
 
   card.appendChild(chk);card.appendChild(info);
   if(m){
@@ -736,7 +743,7 @@ function buildCard(item){
     ad.title=m.name;ad.textContent=initials(m.name);
     card.appendChild(ad);
   }
-  card.appendChild(del);
+  card.appendChild(ctrl);
   return card;
 }
 
@@ -765,6 +772,18 @@ function submitItem(){
   updateProgress(activeList());
   input.value='';input.focus();
   toast('"'+name+'" נוסף ✓');
+}
+
+/* ── Change qty ──────────────────────── */
+function changeQty(card, delta){
+  const id=parseInt(card.dataset.id,10);
+  const item=activeList().find(i=>i.id===id);
+  if(!item)return;
+  const nq=item.qty+delta;
+  if(nq<=0){removeItem(card);return;}
+  item.qty=nq;save();
+  const badge=card.querySelector('.qty-badge');
+  if(badge)badge.textContent=nq+' '+item.unit;
 }
 
 /* ── Remove (animated) ───────────────── */
@@ -808,8 +827,10 @@ function toggleCheck(card){
 document.getElementById('itemsWrap').addEventListener('click',function(e){
   const card=e.target.closest('.item-card');if(!card)return;
   const a=e.target.closest('[data-action]');if(!a)return;
-  if(a.dataset.action==='check') toggleCheck(card);
-  if(a.dataset.action==='delete')removeItem(card);
+  if(a.dataset.action==='check')    toggleCheck(card);
+  if(a.dataset.action==='delete')   removeItem(card);
+  if(a.dataset.action==='increase') changeQty(card, 1);
+  if(a.dataset.action==='decrease') changeQty(card,-1);
 });
 
 /* ── Filters ─────────────────────────── */
