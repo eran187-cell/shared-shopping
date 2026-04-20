@@ -287,10 +287,28 @@ a,button,input,select{touch-action:manipulation}
 .share-btn .share-icon{font-size:18px}
 .copy-ok{background:#27ae60 !important}
 
+/* Onboarding overlay */
+.onboard-sheet{text-align:center;gap:14px!important;max-width:360px;width:calc(100% - 40px);margin:auto}
+.onboard-icon{font-size:44px}
+.onboard-title{font-size:22px;font-weight:700}
+.onboard-sub{font-size:14px;color:var(--mut);margin-bottom:4px}
+.onboard-or{font-size:13px;color:var(--mut);padding:2px 0}
+.onboard-join-row{display:flex;gap:8px;width:100%}
+.onboard-code-inp{flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid var(--bdr);background:var(--bg);font-size:18px;color:var(--txt);outline:none;font-family:monospace;text-align:center;letter-spacing:3px;text-transform:uppercase;min-width:0}
+.onboard-code-inp:focus{border-color:var(--pri)}
+.onboard-error{color:var(--red);font-size:13px;min-height:18px;text-align:center}
+/* House code card in settings */
+.house-code-card{background:var(--pril);border:1.5px solid var(--pri);border-radius:12px;padding:14px 16px;text-align:center;margin-bottom:10px}
+.house-code-label{font-size:12px;color:var(--mut);margin-bottom:8px}
+.house-code-val{font-size:30px;font-weight:800;letter-spacing:5px;color:var(--pri);font-family:monospace}
+.house-code-hint{font-size:12px;color:var(--mut);margin-top:6px}
+
 /* Toast */
 .toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%) translateY(8px);background:#1a1d2e;color:#fff;padding:9px 18px;border-radius:99px;font-size:13px;font-weight:500;z-index:99;opacity:0;transition:all .22s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -303,14 +321,11 @@ a,button,input,select{touch-action:manipulation}
   </div>
 
   <div class="setup-scroll" id="setupScroll">
-    <!-- join banner (shown when opened via share link) -->
-    <div class="join-banner" id="joinBanner">
-      <h4 id="joinBannerTitle">הוזמנת להצטרף!</h4>
-      <p id="joinBannerSub">הפרטים מולאו אוטומטית — אפשר להצטרף ישירות.</p>
-      <div class="join-actions">
-        <button class="btn-join" id="joinConfirmBtn">הצטרפות לבית</button>
-        <button class="btn-join-skip" id="joinSkipBtn">הגדרה ידנית</button>
-      </div>
+    <!-- house code (shown in settings mode) -->
+    <div class="house-code-card" id="houseCodeCard" style="display:none">
+      <div class="house-code-label">קוד הבית שלכם 🔑</div>
+      <div class="house-code-val" id="houseCodeDisplay">------</div>
+      <div class="house-code-hint">שתפו את הקוד עם המשפחה להצטרפות</div>
     </div>
 
     <div id="setupHeader">
@@ -337,7 +352,7 @@ a,button,input,select{touch-action:manipulation}
 
     <button class="btn-primary" id="saveSetupBtn">שמירה והתחלה</button>
     <button class="share-btn" id="shareBtn" style="display:none">
-      <span class="share-icon">🔗</span> שיתוף הלינק עם המשפחה
+      <span class="share-icon">🔗</span> שיתוף קוד הבית
     </button>
     <button class="btn-secondary" id="cancelSetupBtn" style="display:none">ביטול</button>
   </div>
@@ -443,6 +458,22 @@ a,button,input,select{touch-action:manipulation}
   </div>
 </div>
 
+<!-- Onboarding: create or join house -->
+<div class="overlay open" id="onboardOverlay" style="display:none">
+  <div class="sheet onboard-sheet">
+    <div class="onboard-icon">🏠</div>
+    <h2 class="onboard-title">קניות משפחתיות</h2>
+    <p class="onboard-sub">סנכרון בזמן אמת עם כל המשפחה</p>
+    <button class="btn-primary" id="createHouseBtn" style="width:100%;font-size:15px">✨ יצירת בית חדש</button>
+    <div class="onboard-or">— או הצטרפות לבית קיים —</div>
+    <div class="onboard-join-row">
+      <input id="joinCodeInput" class="onboard-code-inp" placeholder="קוד הבית" maxlength="8" autocomplete="off" autocapitalize="characters" inputmode="text"/>
+      <button class="btn-primary" id="joinHouseBtn" style="flex-shrink:0;white-space:nowrap">הצטרפות</button>
+    </div>
+    <div id="joinError" class="onboard-error"></div>
+  </div>
+</div>
+
 <!-- Color picker (reused) -->
 <div class="color-picker" id="colorPicker"></div>
 
@@ -461,34 +492,72 @@ const DEFAULT_TYPES=[
   {id:'bakery',  name:'מאפייה',   emoji:'🥐'},
 ];
 
+/* ── Firebase ────────────────────────── */
+const FB_CFG={
+  apiKey:'AIzaSyA3Kn724RvTn-c-5zoSsWGXapTGWRUw7bM',
+  authDomain:'shared-shopping-deb8e.firebaseapp.com',
+  databaseURL:'https://shared-shopping-deb8e-default-rtdb.europe-west1.firebasedatabase.app',
+  projectId:'shared-shopping-deb8e',
+  storageBucket:'shared-shopping-deb8e.firebasestorage.app',
+  messagingSenderId:'748313112480',
+  appId:'1:748313112480:web:c0584264011442ae42fec5'
+};
+firebase.initializeApp(FB_CFG);
+const db=firebase.database();
+const SESSION=Math.random().toString(36).slice(2);
+let houseId=localStorage.getItem('sl3_houseId')||null;
+let _fbRef=null, _saving=false;
+
 /* ── state ───────────────────────────── */
-let house={name:'',members:[]};  // {name, members:[{id,name,color}]}
+let house={name:'',members:[]};
 let listTypes=[], items={}, nextId=1, selMember=null, activeId=null, activeFilter='all', chipsExpanded=false;
 let colorTargetMemberId=null;
 
 /* ── storage ─────────────────────────── */
-const K={house:'sl3_house',types:'sl3_types',items:'sl3_items',next:'sl3_next'};
 function save(){
-  localStorage.setItem(K.house,JSON.stringify(house));
-  localStorage.setItem(K.types,JSON.stringify(listTypes));
-  localStorage.setItem(K.items,JSON.stringify(items));
-  localStorage.setItem(K.next, String(nextId));
+  if(!houseId)return;
+  _saving=true;
+  const payload={house,types:listTypes,items,nextId,_s:SESSION,_t:Date.now()};
+  db.ref('houses/'+houseId).set(payload)
+    .then(()=>setTimeout(()=>{_saving=false;},600))
+    .catch(()=>{_saving=false;});
 }
-function load(){
-  try{
-    house     =JSON.parse(localStorage.getItem(K.house)||'null')||{name:'',members:[]};
-    listTypes =JSON.parse(localStorage.getItem(K.types)||'null')||DEFAULT_TYPES.map(x=>({...x}));
-    items     =JSON.parse(localStorage.getItem(K.items)||'null')||{};
-    nextId    =parseInt(localStorage.getItem(K.next)||'1',10)||1;
-  }catch(_){
-    house={name:'',members:[]};
-    listTypes=DEFAULT_TYPES.map(x=>({...x}));
-    items={};nextId=1;
-  }
+function applyData(d){
+  if(!d)return;
+  house=d.house||{name:'',members:[]};
+  listTypes=d.types||DEFAULT_TYPES.map(x=>({...x}));
+  items=d.items||{};
+  nextId=d.nextId||1;
   listTypes.forEach(lt=>{if(!items[lt.id])items[lt.id]=[];});
 }
+function renderCurrent(){
+  renderHome();
+  if(activeId&&!document.getElementById('list').classList.contains('slide-right')){
+    renderListView();renderChips();
+  }
+}
+function startListener(id){
+  if(_fbRef){_fbRef.off();_fbRef=null;}
+  _fbRef=db.ref('houses/'+id);
+  _fbRef.on('value',snap=>{
+    if(_saving)return;
+    const d=snap.val();
+    if(!d||d._s===SESSION)return;
+    applyData(d);
+    renderCurrent();
+  });
+}
+function connectToHouse(id,cb){
+  db.ref('houses/'+id).once('value',snap=>{
+    const d=snap.val();
+    if(d)applyData(d);
+    houseId=id;
+    localStorage.setItem('sl3_houseId',id);
+    startListener(id);
+    if(cb)cb(!!d);
+  });
+}
 function uid(){return nextId++;}
-
 function isSetupDone(){return house.name.trim()&&house.members.length>0;}
 
 /* ── helpers ─────────────────────────── */
@@ -550,7 +619,13 @@ function openSetup(mode){
   document.getElementById('setupTopbar').style.display=mode==='settings'?'flex':'none';
   document.getElementById('setupHeader').style.display=mode==='setup'?'block':'none';
   document.getElementById('cancelSetupBtn').style.display=mode==='settings'?'block':'none';
-  document.getElementById('joinBanner').classList.remove('show');
+  const hcc=document.getElementById('houseCodeCard');
+  if(houseId&&mode==='settings'){
+    document.getElementById('houseCodeDisplay').textContent=houseId;
+    hcc.style.display='block';
+  } else {
+    hcc.style.display='none';
+  }
 
   renderMemberList();
   updateShareBtnVisibility();
@@ -622,14 +697,15 @@ document.getElementById('saveSetupBtn').addEventListener('click',function(){
   save();
 
   if(setupMode==='setup'){
+    startListener(houseId);
     document.getElementById('setup').classList.add('hidden');
     document.getElementById('home').classList.remove('hidden');
+    toast('הבית נוצר! קוד הבית: '+houseId);
   } else {
-    // stay on settings to show share button
     updateShareBtnVisibility();
+    toast('ההגדרות נשמרו ✓');
   }
   renderHome();
-  toast('ההגדרות נשמרו ✓');
 });
 
 document.getElementById('cancelSetupBtn').addEventListener('click',goHome);
@@ -1024,90 +1100,28 @@ document.getElementById('delConfirm').addEventListener('click',function(){
   toast('רשימת "'+name+'" נמחקה');
 });
 
-/* ══ SHARE URL ════════════════════════════════ */
-function encodeHouseConfig(h){
-  const json=JSON.stringify({name:h.name,members:h.members});
-  // unicode-safe base64
-  const b64=btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/gi,(_,p)=>String.fromCharCode(parseInt(p,16))));
-  return b64;
-}
-function decodeHouseConfig(b64){
-  try{
-    const json=decodeURIComponent(Array.from(atob(b64),c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
-    return JSON.parse(json);
-  }catch(_){return null;}
-}
-function buildShareURL(){
-  const base=location.href.split('#')[0];
-  return base+'#join='+encodeHouseConfig(house);
-}
-
+/* ══ SHARE HOUSE CODE ════════════════════════════════ */
 let shareTimer;
 document.getElementById('shareBtn').addEventListener('click',function(){
-  const url=buildShareURL();
-  navigator.clipboard.writeText(url).then(()=>{
-    this.innerHTML='<span class="share-icon">✓</span> הלינק הועתק!';
+  if(!houseId)return;
+  const share=()=>{
+    this.innerHTML='<span class="share-icon">✓</span> הקוד הועתק!';
     this.classList.add('copy-ok');
     clearTimeout(shareTimer);
     shareTimer=setTimeout(()=>{
-      this.innerHTML='<span class="share-icon">🔗</span> שיתוף הלינק עם המשפחה';
+      this.innerHTML='<span class="share-icon">🔗</span> שיתוף קוד הבית';
       this.classList.remove('copy-ok');
     },2500);
-  }).catch(()=>{
-    prompt('העתקת הלינק:',url);
+  };
+  navigator.clipboard.writeText(houseId).then(share).catch(()=>{
+    prompt('קוד הבית שלכם:',houseId);share();
   });
-});
-
-/* ══ JOIN (share link) handling ════════════════ */
-let joinConfig=null; // config decoded from URL
-
-function parseJoinHash(){
-  const hash=location.hash;
-  const m=hash.match(/[#&]join=([^&]+)/);
-  if(!m)return null;
-  return decodeHouseConfig(m[1]);
-}
-
-function showJoinBanner(cfg){
-  document.getElementById('joinBannerTitle').textContent='הוזמנת לבית "'+cfg.name+'"';
-  document.getElementById('joinBannerSub').textContent=
-    cfg.members.map(m=>m.name).join(', ')+' · '+cfg.members.length+' שותפים';
-  document.getElementById('joinBanner').classList.add('show');
-  // pre-fill form
-  document.getElementById('houseName').value=cfg.name;
-  editMembers=cfg.members.map(m=>({...m}));
-  renderMemberList();
-  // hide normal header text
-  document.getElementById('setupHeader').style.display='none';
-}
-
-document.getElementById('joinConfirmBtn').addEventListener('click',function(){
-  if(!joinConfig)return;
-  house.name=joinConfig.name;
-  house.members=joinConfig.members;
-  save();
-  document.getElementById('joinBanner').classList.remove('show');
-  document.getElementById('setup').classList.add('hidden');
-  document.getElementById('home').classList.remove('hidden');
-  // clear hash so refreshing doesn't re-trigger
-  history.replaceState(null,'',location.pathname+location.search);
-  renderHome();
-  toast('ברוכים הבאים לבית "'+house.name+'" ✓');
-});
-
-document.getElementById('joinSkipBtn').addEventListener('click',function(){
-  joinConfig=null;
-  document.getElementById('joinBanner').classList.remove('show');
-  document.getElementById('setupHeader').style.display='block';
-  document.getElementById('houseName').value='';
-  editMembers=[];
-  renderMemberList();
 });
 
 /* show share btn when in settings mode */
 function updateShareBtnVisibility(){
   document.getElementById('shareBtn').style.display=
-    (setupMode==='settings'&&isSetupDone())?'flex':'none';
+    (setupMode==='settings'&&isSetupDone()&&houseId)?'flex':'none';
 }
 
 /* ══ DARK MODE ═══════════════════════════════ */
@@ -1124,28 +1138,66 @@ document.getElementById('darkToggle').addEventListener('click', function(){
 /* ══ BOOT ════════════════════════════════════ */
 buildColorPicker();
 applyTheme(localStorage.getItem('sl3_dark') === '1');
-load();
-joinConfig=parseJoinHash();
 
-if(joinConfig){
-  // opened via share link
-  document.getElementById('setup').classList.remove('slide-right','hidden');
+// default: init types so DEFAULT_TYPES exist before any render
+listTypes=DEFAULT_TYPES.map(x=>({...x}));
+listTypes.forEach(lt=>{if(!items[lt.id])items[lt.id]=[];});
+
+if(houseId){
+  // known house — connect to Firebase and show home
   document.getElementById('home').classList.add('hidden');
-  document.getElementById('setupTopbar').style.display='none';
-  document.getElementById('setupHeader').style.display='none';
-  document.getElementById('cancelSetupBtn').style.display='none';
-  document.getElementById('shareBtn').style.display='none';
-  editMembers=joinConfig.members.map(m=>({...m}));
-  showJoinBanner(joinConfig);
-} else if(!isSetupDone()){
-  document.getElementById('setup').classList.remove('slide-right');
-  document.getElementById('home').classList.add('hidden');
-  document.getElementById('shareBtn').style.display='none';
-} else {
-  document.getElementById('home').classList.remove('hidden');
   document.getElementById('setup').classList.add('slide-right');
-  renderHome();
+  document.getElementById('onboardOverlay').style.display='none';
+  connectToHouse(houseId,()=>{
+    document.getElementById('home').classList.remove('hidden');
+    renderHome();
+  });
+} else {
+  // no house yet — show onboarding
+  document.getElementById('onboardOverlay').style.display='flex';
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('setup').classList.add('slide-right');
 }
+
+/* ── Onboarding handlers ─────────────── */
+document.getElementById('createHouseBtn').addEventListener('click',function(){
+  // generate 6-char uppercase house code
+  const newId=Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6).padEnd(6,'0');
+  houseId=newId;
+  localStorage.setItem('sl3_houseId',newId);
+  // reset to defaults
+  house={name:'',members:[]};
+  listTypes=DEFAULT_TYPES.map(x=>({...x}));
+  items={};nextId=1;
+  listTypes.forEach(lt=>{items[lt.id]=[];});
+  document.getElementById('onboardOverlay').style.display='none';
+  openSetup('setup');
+});
+
+document.getElementById('joinHouseBtn').addEventListener('click',async function(){
+  const code=document.getElementById('joinCodeInput').value.trim().toUpperCase().replace(/\s/g,'');
+  const errEl=document.getElementById('joinError');
+  errEl.textContent='';
+  if(code.length<4){errEl.textContent='קוד לא תקין — לפחות 4 תווים';return;}
+  this.disabled=true;this.textContent='...';
+  try{
+    const snap=await db.ref('houses/'+code).once('value');
+    if(!snap.exists()){
+      errEl.textContent='קוד הבית לא נמצא. בדקו שוב.';
+      this.disabled=false;this.textContent='הצטרפות';
+      return;
+    }
+    connectToHouse(code,()=>{
+      document.getElementById('onboardOverlay').style.display='none';
+      document.getElementById('home').classList.remove('hidden');
+      renderHome();
+      toast('ברוכים הבאים לבית "'+house.name+'" ✓');
+    });
+  }catch(e){
+    errEl.textContent='שגיאת חיבור. בדקו אינטרנט ונסו שוב.';
+    this.disabled=false;this.textContent='הצטרפות';
+  }
+});
 </script>
 </body>
 </html>
