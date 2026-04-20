@@ -456,6 +456,18 @@ a,button,input,select{touch-action:manipulation}
   </div>
 </div>
 
+<!-- Confirm join via deeplink -->
+<div class="overlay" id="joinOverlay">
+  <div class="sheet">
+    <h3 id="joinOverlayTitle">הוזמנת להצטרף!</h3>
+    <p id="joinOverlayMsg"></p>
+    <div class="sheet-actions">
+      <button class="btn-danger" id="joinOverlayConfirm" style="background:var(--pri)">הצטרפות</button>
+      <button class="btn-cancel" id="joinOverlayCancel">ביטול</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirm delete list -->
 <div class="overlay" id="delOverlay">
   <div class="sheet">
@@ -1112,8 +1124,9 @@ document.getElementById('delConfirm').addEventListener('click',function(){
 let shareTimer;
 document.getElementById('shareBtn').addEventListener('click',function(){
   if(!houseId)return;
-  const share=()=>{
-    this.innerHTML='<span class="share-icon">✓</span> הקוד הועתק!';
+  const url=location.href.split('?')[0].split('#')[0]+'?h='+houseId;
+  const ok=()=>{
+    this.innerHTML='<span class="share-icon">✓</span> הלינק הועתק!';
     this.classList.add('copy-ok');
     clearTimeout(shareTimer);
     shareTimer=setTimeout(()=>{
@@ -1121,9 +1134,11 @@ document.getElementById('shareBtn').addEventListener('click',function(){
       this.classList.remove('copy-ok');
     },2500);
   };
-  navigator.clipboard.writeText(houseId).then(share).catch(()=>{
-    prompt('קוד הבית שלכם:',houseId);share();
-  });
+  if(navigator.share){
+    navigator.share({title:'הצטרפות לבית '+house.name,url}).catch(()=>{});ok();
+  } else {
+    navigator.clipboard.writeText(url).then(ok).catch(()=>{prompt('לינק הצטרפות:',url);ok();});
+  }
 });
 
 /* show share btn when in settings mode */
@@ -1151,7 +1166,39 @@ applyTheme(localStorage.getItem('sl3_dark') === '1');
 listTypes=DEFAULT_TYPES.map(x=>({...x}));
 listTypes.forEach(lt=>{if(!items[lt.id])items[lt.id]=[];});
 
-if(houseId){
+const _deeplink=new URLSearchParams(location.search).get('h')||null;
+// clean URL immediately so refresh doesn't re-trigger
+if(_deeplink) history.replaceState(null,'',location.pathname);
+
+if(_deeplink && _deeplink!==houseId){
+  // invited via link — show confirmation sheet
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('setup').classList.add('slide-right');
+  document.getElementById('onboardOverlay').style.display='none';
+  // load house name from Firebase then show confirm
+  db.ref('houses/'+_deeplink+'/house/name').once('value',snap=>{
+    const name=snap.val()||_deeplink;
+    document.getElementById('joinOverlayTitle').textContent='הוזמנת לבית "'+name+'"';
+    document.getElementById('joinOverlayMsg').textContent='לחיצה על הצטרפות תחבר אותך לרשימות המשפחה המשותפות.';
+    document.getElementById('joinOverlay').classList.add('open');
+    document.getElementById('joinOverlayConfirm').onclick=function(){
+      document.getElementById('joinOverlay').classList.remove('open');
+      connectToHouse(_deeplink,()=>{
+        document.getElementById('home').classList.remove('hidden');
+        renderHome();
+        toast('ברוכים הבאים לבית "'+house.name+'" ✓');
+      });
+    };
+    document.getElementById('joinOverlayCancel').onclick=function(){
+      document.getElementById('joinOverlay').classList.remove('open');
+      if(houseId){
+        connectToHouse(houseId,()=>{document.getElementById('home').classList.remove('hidden');renderHome();});
+      } else {
+        document.getElementById('onboardOverlay').style.display='flex';
+      }
+    };
+  });
+} else if(houseId){
   // known house — connect to Firebase and show home
   document.getElementById('home').classList.add('hidden');
   document.getElementById('setup').classList.add('slide-right');
