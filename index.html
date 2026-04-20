@@ -223,16 +223,33 @@ a,button,input,select{touch-action:manipulation}
 }
 .qasel:focus{border-color:var(--pri)}
 .qaqty{max-width:72px;text-align:center}
-.mchips{display:flex;gap:5px;flex-wrap:nowrap;flex:1;align-items:center;overflow:hidden}
-.mchip{
-  width:36px;height:36px;border-radius:50%;flex-shrink:0;
-  border:2.5px solid transparent;font-size:12px;font-weight:700;
-  color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;
-  transition:all .15s;opacity:.55;
+/* Assignee picker button */
+.assignee-wrap{position:relative;flex-shrink:0}
+.assignee-btn{
+  width:36px;height:36px;border-radius:50%;border:1.5px solid var(--bdr);
+  background:var(--bg);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;transition:all .15s;color:var(--txt);opacity:.6;
+  font-size:12px;font-weight:700;flex-shrink:0;padding:0;
 }
-.mchip.on{border-color:#fff;opacity:1;transform:scale(1.1)}
-.mchip-more{background:var(--mut)!important;opacity:.7;font-size:11px;font-weight:700}
-.mchip-more:hover{opacity:1}
+.assignee-btn:hover{border-color:var(--pri);opacity:1;color:var(--pri)}
+.assignee-btn.has-member{border-color:transparent;color:#fff;opacity:1}
+.assignee-drop{
+  display:none;position:absolute;bottom:calc(100% + 8px);right:0;
+  background:var(--sur);border:1.5px solid var(--bdr);border-radius:12px;
+  box-shadow:0 4px 20px rgba(0,0,0,.15);padding:8px;
+  flex-direction:column;gap:6px;z-index:200;min-width:160px;
+}
+.assignee-drop.open{display:flex}
+.adrop-item{
+  display:flex;align-items:center;gap:10px;padding:7px 10px;
+  border-radius:8px;cursor:pointer;transition:background .12s;
+  font-size:14px;color:var(--txt);background:transparent;border:none;
+  font-family:inherit;text-align:right;width:100%;
+}
+.adrop-item:hover{background:var(--bg)}
+.adrop-item.on{background:var(--pril);color:var(--pri);font-weight:600}
+.adrop-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+.adrop-none{color:var(--mut);font-style:italic}
 
 /* Qty +/- control */
 .qty-ctrl{display:flex;align-items:center;border:1.5px solid var(--bdr);border-radius:8px;background:var(--bg);overflow:hidden;flex-shrink:0}
@@ -405,7 +422,12 @@ a,button,input,select{touch-action:manipulation}
       <option>ליטר</option><option>מ"ל</option><option>אריזה</option>
       <option>קופסה</option><option>שקית</option>
     </select>
-    <div class="mchips" id="mchipsEl"></div>
+    <div class="assignee-wrap" id="assigneeWrap">
+      <button class="assignee-btn" id="assigneeBtn" title="שיוך למשתתף">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+      <div class="assignee-drop" id="assigneeDrop"></div>
+    </div>
   </div>
 </div>
 
@@ -772,6 +794,7 @@ function submitItem(){
   }
   updateProgress(activeList());
   input.value='';input.focus();
+  selMember=null;renderAssigneeBtn();
   toast('"'+name+'" נוסף ✓');
 }
 
@@ -846,28 +869,59 @@ document.querySelector('.filters').addEventListener('click',function(e){
 /* ── Quick-add events ────────────────── */
 document.getElementById('qaBtn').addEventListener('click',submitItem);
 document.getElementById('qaInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitItem();});
-document.getElementById('mchipsEl').addEventListener('click',function(e){
-  const more=e.target.closest('.mchip-more');
-  if(more){chipsExpanded=!chipsExpanded;renderChips();return;}
-  const chip=e.target.closest('.mchip');if(!chip)return;
-  selMember=selMember===chip.dataset.mid?null:chip.dataset.mid;
-  renderChips();
+/* ── Assignee picker ─────────────────── */
+const assigneeBtn=document.getElementById('assigneeBtn');
+const assigneeDrop=document.getElementById('assigneeDrop');
+
+assigneeBtn.addEventListener('click',function(e){
+  e.stopPropagation();
+  const isOpen=assigneeDrop.classList.contains('open');
+  assigneeDrop.classList.toggle('open',!isOpen);
+  if(!isOpen)renderAssigneeDrop();
 });
 
-function renderChips(){
-  const el=document.getElementById('mchipsEl');
+assigneeDrop.addEventListener('click',function(e){
+  const row=e.target.closest('.adrop-item');if(!row)return;
+  const mid=row.dataset.mid||null;
+  selMember=selMember===mid?null:mid;
+  assigneeDrop.classList.remove('open');
+  renderAssigneeBtn();
+});
+
+document.addEventListener('click',function(e){
+  if(!document.getElementById('assigneeWrap').contains(e.target))
+    assigneeDrop.classList.remove('open');
+});
+
+function renderAssigneeDrop(){
   const members=house.members;
-  const SHOW=2;
-  const chipHtml=m=>'<div class="mchip'+(selMember===m.id?' on':'')+'" style="background:'+m.color+'" data-mid="'+m.id+'" title="'+esc(m.name)+'">'+initials(m.name)+'</div>';
-  if(members.length<=SHOW||chipsExpanded){
-    el.innerHTML=members.map(chipHtml).join('');
-    if(chipsExpanded&&members.length>SHOW)
-      el.innerHTML+='<div class="mchip mchip-more" data-more="1">−</div>';
+  let html='<button class="adrop-item'+(selMember===null?' on':'')+'" data-mid="">'
+    +'<span class="adrop-avatar" style="background:var(--mut)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>'
+    +'<span class="adrop-none">ללא שיוך</span></button>';
+  members.forEach(m=>{
+    html+='<button class="adrop-item'+(selMember===m.id?' on':'')+'" data-mid="'+m.id+'">'
+      +'<span class="adrop-avatar" style="background:'+m.color+'">'+initials(m.name)+'</span>'
+      +esc(m.name)+'</button>';
+  });
+  assigneeDrop.innerHTML=html;
+}
+
+function renderAssigneeBtn(){
+  const m=selMember?getMember(selMember):null;
+  if(m){
+    assigneeBtn.className='assignee-btn has-member';
+    assigneeBtn.style.background=m.color;
+    assigneeBtn.innerHTML='<span style="font-size:12px;font-weight:700;color:#fff">'+initials(m.name)+'</span>';
+    assigneeBtn.title=m.name;
   } else {
-    el.innerHTML=members.slice(0,SHOW).map(chipHtml).join('')
-      +'<div class="mchip mchip-more" data-more="1">+'+(members.length-SHOW)+'</div>';
+    assigneeBtn.className='assignee-btn';
+    assigneeBtn.style.background='';
+    assigneeBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    assigneeBtn.title='שיוך למשתתף';
   }
 }
+
+function renderChips(){renderAssigneeBtn();}
 
 /* ── WhatsApp share ──────────────────── */
 document.getElementById('waShareBtn').addEventListener('click', function () {
