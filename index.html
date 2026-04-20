@@ -303,7 +303,7 @@ a,button,input,select{touch-action:manipulation}
   width:100%;
   padding:13px 14px;border-radius:10px;border:1.5px solid var(--bdr);
   background:var(--bg);font-size:18px;color:var(--txt);outline:none;
-  font-family:monospace;text-align:center;letter-spacing:3px;text-transform:uppercase;
+  font-family:inherit;text-align:center;letter-spacing:3px;text-transform:uppercase;
 }
 .onboard-code-inp:focus{border-color:var(--pri)}
 .onboard-error{color:var(--red);font-size:13px;min-height:18px;text-align:center}
@@ -475,9 +475,9 @@ a,button,input,select{touch-action:manipulation}
     <h2 class="onboard-title">קניות משפחתיות</h2>
     <p class="onboard-sub">סנכרון בזמן אמת עם כל המשפחה</p>
     <button class="btn-primary" id="createHouseBtn" style="width:100%;font-size:15px">✨ יצירת בית חדש</button>
-    <div class="onboard-or">— או הצטרפות לבית קיים —</div>
+    <div class="onboard-or">או הצטרפות לבית קיים</div>
     <input id="joinCodeInput" class="onboard-code-inp" placeholder="קוד הבית" maxlength="8" autocomplete="off" autocapitalize="characters" inputmode="text"/>
-    <button class="btn-primary" id="joinHouseBtn" style="width:100%;font-size:15px">הצטרפות לבית קיים</button>
+    <button class="btn-primary" id="joinHouseBtn" style="width:100%;font-size:15px">הצטרפות</button>
     <div id="joinError" class="onboard-error"></div>
   </div>
 </div>
