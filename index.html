@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<title>קניות משפחתיות</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f5fb;--sur:#fff;--bdr:#e6e8f0;
+  --pri:#5b4fcf;--pril:#ece9fc;
+  --txt:#1a1d2e;--mut:#8a8fa8;
+  --red:#e74c3c;--r:14px;
+  --sab:env(safe-area-inset-bottom, 0px);
+}
+/* dark mode — overrides only colour tokens */
+body.dark{
+  --bg:#0f1117;--sur:#1c1f2b;--bdr:#2a2d3e;
+  --pril:#1e1a3a;--txt:#e8eaf6;--mut:#5c6080;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg);color:var(--txt);
+  min-height:100vh;min-height:100dvh;
+  overflow-x:hidden;
+  overscroll-behavior:none;
+  -webkit-text-size-adjust:100%;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .25s,color .25s;
+}
+/* smooth colour switch on all main surfaces */
+.view,.topbar,.setup-topbar,.prog-row,.qabar,
+.item-card,.section-card,.lt-card,.sheet,.new-lt-form,.join-banner{
+  transition:background .25s,border-color .25s,color .25s,
+             transform .3s cubic-bezier(.4,0,.2,1),opacity .3s;
+}
+/* make all buttons finger-friendly */
+button{touch-action:manipulation}
+/* prevent double-tap zoom on interactive elements */
+a,button,input,select{touch-action:manipulation}
+
+/* ── Views ── */
+.view{
+  position:fixed;inset:0;
+  display:flex;flex-direction:column;
+  background:var(--bg);
+  transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s;
+  /* use dvh so iOS Safari chrome is excluded */
+  height:100vh;height:100dvh;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.view.hidden{transform:translateX(-100%);opacity:0;pointer-events:none}
+.view.slide-right{transform:translateX(100%);opacity:0;pointer-events:none}
+
+/* ══ SETUP / SETTINGS view ══════════════════════════ */
+#setup .setup-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:40px 24px calc(60px + var(--sab));max-width:480px;margin:0 auto;width:100%}
+#setup .setup-logo{text-align:center;font-size:52px;margin-bottom:8px}
+#setup .setup-title{text-align:center;font-size:22px;font-weight:800;margin-bottom:4px}
+#setup .setup-sub{text-align:center;font-size:14px;color:var(--mut);margin-bottom:32px}
+
+.section-card{background:var(--sur);border-radius:16px;border:1.5px solid var(--bdr);padding:20px;margin-bottom:16px}
+.section-card h3{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin-bottom:14px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin-bottom:5px}
+.field input{width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--bdr);background:var(--bg);font-size:16px;color:var(--txt);outline:none;font-family:inherit;transition:border .15s;-webkit-appearance:none}
+.field input:focus{border-color:var(--pri);background:var(--sur);color:var(--txt)}
+
+/* Members list in settings */
+.member-list{display:flex;flex-direction:column;gap:8px}
+.member-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border-radius:10px;border:1.5px solid var(--bdr);animation:fadeUp .2s ease both}
+.mem-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;cursor:pointer;transition:transform .15s}
+.mem-av:hover{transform:scale(1.1)}
+.mem-name-inp{flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--bdr);background:var(--sur);font-size:16px;color:var(--txt);outline:none;font-family:inherit;-webkit-appearance:none}
+.mem-name-inp:focus{border-color:var(--pri)}
+.mem-del{width:30px;height:30px;border-radius:8px;border:none;background:transparent;color:var(--mut);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.mem-del:hover{background:#fdecea;color:var(--red)}
+
+.add-member-btn{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:1.5px dashed var(--bdr);background:transparent;color:var(--mut);font-size:14px;cursor:pointer;width:100%;transition:all .15s;font-family:inherit}
+.add-member-btn:hover{border-color:var(--pri);color:var(--pri);background:var(--pril)}
+
+/* Color picker popup */
+.color-picker{display:none;flex-wrap:wrap;gap:7px;padding:10px;background:var(--sur);border-radius:12px;border:1.5px solid var(--bdr);box-shadow:0 4px 20px rgba(0,0,0,.12);position:absolute;z-index:100;width:200px}
+.color-picker.open{display:flex}
+.cp-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;transition:transform .15s;border:2.5px solid transparent}
+.cp-dot:hover{transform:scale(1.15)}
+.cp-dot.sel{border-color:var(--txt)}
+
+.btn-primary{width:100%;padding:14px;border-radius:12px;background:var(--pri);color:#fff;border:none;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;transition:background .15s;font-family:inherit}
+.btn-primary:hover{background:#4a3fbe}
+.btn-secondary{width:100%;padding:12px;border-radius:12px;background:var(--bg);color:var(--txt);border:1.5px solid var(--bdr);font-size:15px;cursor:pointer;margin-top:8px;transition:all .15s;font-family:inherit}
+.btn-secondary:hover{border-color:var(--pri);color:var(--pri)}
+
+/* Setup top-bar (for settings mode) */
+.setup-topbar{background:var(--sur);padding:14px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.setup-topbar h2{flex:1;font-size:18px;font-weight:700}
+
+/* ══ HOME view ═══════════════════════════════════════ */
+#home .topbar{background:var(--sur);padding:16px 20px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.house-name{font-size:18px;font-weight:700;color:var(--txt)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.members{display:flex}
+.av{width:30px;height:30px;border-radius:50%;border:2px solid var(--sur);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;margin-right:-8px;cursor:default;flex-shrink:0}
+.icon-btn{width:36px;height:36px;border-radius:10px;border:none;background:transparent;color:var(--mut);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.icon-btn:hover{background:var(--bg)}
+
+#home .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 20px calc(24px + var(--sab))}
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);margin-bottom:12px}
+
+.lt-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.lt-card{background:var(--sur);border-radius:16px;border:1.5px solid var(--bdr);padding:16px;cursor:pointer;transition:all .18s;animation:fadeUp .25s ease both;user-select:none}
+.lt-card:hover{border-color:var(--pri);box-shadow:0 4px 18px rgba(91,79,207,.13);transform:translateY(-2px)}
+.lt-card:active{transform:scale(.97)}
+.lt-emoji{font-size:28px;margin-bottom:10px}
+.lt-name{font-size:15px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt-count{font-size:12px;color:var(--mut)}
+.lt-bar{height:4px;background:var(--bdr);border-radius:99px;margin-top:10px;overflow:hidden}
+.lt-fill{height:100%;background:var(--pri);border-radius:99px;transition:width .4s}
+.lt-card.add-card{border:1.5px dashed var(--bdr);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--mut);min-height:110px}
+.lt-card.add-card:hover{border-color:var(--pri);color:var(--pri);background:var(--pril)}
+.lt-card.add-card .plus{font-size:28px}
+.lt-card.add-card span{font-size:13px;font-weight:500}
+
+.new-lt-form{background:var(--sur);border-radius:var(--r);border:1.5px solid var(--bdr);padding:16px;display:none;margin-bottom:16px;animation:fadeUp .2s ease}
+.new-lt-form.open{display:block}
+.new-lt-form h3{font-size:15px;font-weight:700;margin-bottom:12px}
+.nlf-row{display:flex;gap:8px;align-items:center}
+.emojifield{width:48px;flex-shrink:0;padding:10px 6px;border-radius:10px;border:1.5px solid var(--bdr);background:var(--bg);font-size:16px;color:var(--txt);outline:none;font-family:inherit;text-align:center;-webkit-appearance:none}
+.emojifield:focus{border-color:var(--pri);background:var(--sur)}
+.nlf-name{flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--bdr);background:var(--bg);font-size:16px;color:var(--txt);outline:none;font-family:inherit;-webkit-appearance:none}
+.nlf-name:focus{border-color:var(--pri);background:var(--sur)}
+.btn-sm-sq{width:46px;height:46px;border-radius:10px;border:none;background:var(--pri);color:#fff;font-size:26px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.btn-sm-sq:active{background:#4a3fbe}
+.btn-sm{padding:10px 16px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-sm.sec{background:var(--bg);color:var(--mut)}.btn-sm.sec:hover{background:var(--bdr)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══ LIST view ═══════════════════════════════════════ */
+#list .topbar{background:var(--sur);padding:14px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+.back-btn{width:36px;height:36px;border-radius:10px;border:none;background:var(--bg);color:var(--txt);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+.back-btn:hover{background:var(--bdr)}
+#list .topbar h2{font-size:18px;font-weight:700;flex:1}
+
+.prog-row{background:var(--sur);padding:10px 16px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px}
+.pbar{flex:1;height:5px;background:var(--bdr);border-radius:99px;overflow:hidden}
+.pfill{height:100%;background:var(--pri);border-radius:99px;transition:width .4s}
+.plabel{font-size:12px;color:var(--mut);white-space:nowrap}
+
+.filters{display:flex;gap:8px;padding:12px 16px 0}
+.fbtn{padding:6px 14px;border-radius:99px;border:1.5px solid var(--bdr);background:var(--sur);font-size:13px;font-weight:500;color:var(--mut);cursor:pointer;transition:all .15s}
+.fbtn.active{background:var(--pri);border-color:var(--pri);color:#fff}
+
+/* padding-bottom = qabar height (~130px) + home indicator */
+.items-wrap{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px calc(130px + var(--sab))}
+
+.item-card{background:var(--sur);border-radius:var(--r);border:1.5px solid var(--bdr);padding:13px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;overflow:hidden;max-height:120px;transition:opacity .22s,transform .22s,max-height .25s,margin-bottom .25s,padding .25s,border-color .15s,box-shadow .15s;animation:cardIn .22s cubic-bezier(.34,1.56,.64,1) both}
+.item-card:hover{border-color:var(--pri);box-shadow:0 2px 14px rgba(0,0,0,.08)}
+.item-card.checked{opacity:.45}
+.item-card.checked .iname{text-decoration:line-through;color:var(--mut)}
+.item-card.out{opacity:0;transform:translateX(28px);max-height:0;margin-bottom:0;padding-top:0;padding-bottom:0;border-width:0}
+@keyframes cardIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.chk{width:26px;height:26px;border-radius:8px;border:2px solid var(--bdr);background:transparent;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.chk.on{background:var(--pri);border-color:var(--pri)}
+.chk.on::after{content:'✓';color:#fff;font-size:13px;font-weight:700}
+.iinfo{flex:1;min-width:0}
+.iname{font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imeta{font-size:12px;color:var(--mut);margin-top:3px;display:flex;gap:6px;align-items:center}
+.qty-badge{background:var(--bg);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600;color:var(--txt)}
+.who-badge{padding:1px 8px;border-radius:6px;font-size:11px;font-weight:600;color:#fff}
+.adot{width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.delbtn{width:36px;height:36px;border-radius:8px;border:none;background:transparent;color:var(--mut);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;opacity:0}
+.item-card:hover .delbtn{opacity:1}
+.delbtn:active{background:#fdecea;color:var(--red)}
+/* on touch devices show delete button always (no hover) */
+@media(hover:none){.delbtn{opacity:.35}}
+
+.empty-list{text-align:center;padding:60px 20px;color:var(--mut)}
+.empty-list .ei{font-size:48px;margin-bottom:12px}
+.empty-list p{font-size:15px;line-height:1.6}
+
+/* Quick-add bar */
+.qabar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;
+  background:var(--sur);border-top:1px solid var(--bdr);
+  /* account for home indicator on notched iPhones */
+  padding:12px 16px calc(14px + var(--sab));
+  z-index:30;box-shadow:0 -4px 20px rgba(0,0,0,.07);display:none;
+}
+.qabar.visible{display:block}
+.qarow{display:flex;gap:8px}
+/* font-size ≥ 16px prevents iOS from zooming in on focus (cursor offset fix) */
+.qainput{
+  flex:1;padding:12px 14px;border-radius:10px;
+  border:1.5px solid var(--bdr);background:var(--bg);
+  font-size:16px;color:var(--txt);outline:none;
+  transition:border .15s;font-family:inherit;
+  -webkit-appearance:none;
+}
+.qainput:focus{border-color:var(--pri);background:var(--sur);color:var(--txt)}
+.qainput::placeholder{color:var(--mut)}
+.qabtn{
+  width:50px;height:50px;border-radius:10px;
+  background:var(--pri);border:none;color:#fff;font-size:26px;
+  cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.qabtn:active{background:#4a3fbe}
+.qaopts{display:flex;gap:8px;margin-top:8px;align-items:center}
+.qasel{
+  flex:1;padding:8px 10px;border-radius:8px;
+  border:1.5px solid var(--bdr);background:var(--bg);
+  font-size:16px;color:var(--txt);outline:none;font-family:inherit;cursor:pointer;
+  -webkit-appearance:none;
+}
+.qasel:focus{border-color:var(--pri)}
+.qaqty{max-width:72px;text-align:center}
+.mchips{display:flex;gap:5px;flex-wrap:nowrap;flex:1;align-items:center;overflow:hidden}
+.mchip{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  border:2.5px solid transparent;font-size:12px;font-weight:700;
+  color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:all .15s;opacity:.55;
+}
+.mchip.on{border-color:#fff;opacity:1;transform:scale(1.1)}
+.mchip-more{background:var(--mut)!important;opacity:.7;font-size:11px;font-weight:700}
+.mchip-more:hover{opacity:1}
+
+/* Qty +/- control */
+.qty-ctrl{display:flex;align-items:center;border:1.5px solid var(--bdr);border-radius:8px;background:var(--bg);overflow:hidden;flex-shrink:0}
+.qty-ctrl:focus-within{border-color:var(--pri)}
+.qty-btn{width:30px;height:42px;border:none;background:transparent;color:var(--pri);font-size:20px;font-weight:700;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .1s;line-height:1}
+.qty-btn:active{background:var(--pril)}
+.qaqty-inp{width:38px;text-align:center;border:none;border-left:1px solid var(--bdr);border-right:1px solid var(--bdr);background:transparent;font-size:15px;color:var(--txt);outline:none;font-family:inherit;padding:8px 2px;-webkit-appearance:none}
+
+/* Edit-title pencil icon */
+.edit-title-btn{width:26px;height:26px;border:none;background:transparent;color:var(--mut);font-size:13px;cursor:pointer;flex-shrink:0;opacity:.45;transition:opacity .15s;display:flex;align-items:center;justify-content:center;padding:0}
+.edit-title-btn:hover{opacity:1;color:var(--pri)}
+
+/* Confirm sheet */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.sheet{background:var(--sur);border-radius:20px 20px 0 0;padding:20px 20px 32px;width:100%;max-width:480px;transform:translateY(100%);transition:transform .28s cubic-bezier(.34,1.2,.64,1)}
+.overlay.open .sheet{transform:translateY(0)}
+.sheet h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.sheet p{font-size:14px;color:var(--mut);margin-bottom:18px}
+.sheet-actions{display:flex;gap:10px}
+.btn-danger{flex:1;padding:13px;border-radius:10px;background:var(--red);color:#fff;border:none;font-size:15px;font-weight:600;cursor:pointer}
+.btn-cancel{flex:1;padding:13px;border-radius:10px;background:var(--bg);color:var(--txt);border:none;font-size:15px;cursor:pointer}
+
+/* Share / Join */
+.join-banner{background:linear-gradient(135deg,#5b4fcf,#8b5cf6);color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:16px;display:none}
+.join-banner.show{display:block}
+.join-banner h4{font-size:15px;font-weight:700;margin-bottom:4px}
+.join-banner p{font-size:13px;opacity:.85;margin-bottom:12px}
+.join-actions{display:flex;gap:8px}
+.btn-join{flex:1;padding:10px;border-radius:10px;background:#fff;color:var(--pri);border:none;font-size:14px;font-weight:700;cursor:pointer}
+.btn-join-skip{padding:10px 14px;border-radius:10px;background:rgba(255,255,255,.2);color:#fff;border:none;font-size:13px;cursor:pointer}
+
+.share-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px 16px;border-radius:12px;background:var(--pri);color:#fff;border:none;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .15s;font-family:inherit}
+.share-btn:hover{background:#4a3fbe}
+.share-btn .share-icon{font-size:18px}
+.copy-ok{background:#27ae60 !important}
+
+/* Toast */
+.toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%) translateY(8px);background:#1a1d2e;color:#fff;padding:9px 18px;border-radius:99px;font-size:13px;font-weight:500;z-index:99;opacity:0;transition:all .22s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP / SETTINGS VIEW ═══════════════════════ -->
+<div class="view slide-right" id="setup">
+  <!-- topbar shown only in settings mode -->
+  <div class="setup-topbar" id="setupTopbar" style="display:none">
+    <button class="back-btn" id="settingsBack">&#8594;</button>
+    <h2>הגדרות משפחה</h2>
+  </div>
+
+  <div class="setup-scroll" id="setupScroll">
+    <!-- join banner (shown when opened via share link) -->
+    <div class="join-banner" id="joinBanner">
+      <h4 id="joinBannerTitle">הוזמנת להצטרף!</h4>
+      <p id="joinBannerSub">הפרטים מולאו אוטומטית — אפשר להצטרף ישירות.</p>
+      <div class="join-actions">
+        <button class="btn-join" id="joinConfirmBtn">הצטרפות לבית</button>
+        <button class="btn-join-skip" id="joinSkipBtn">הגדרה ידנית</button>
+      </div>
+    </div>
+
+    <div id="setupHeader">
+      <div class="setup-logo">🏠</div>
+      <div class="setup-title">ברוכים הבאים!</div>
+      <div class="setup-sub">הגדרת הבית והשותפים</div>
+    </div>
+
+    <div class="section-card">
+      <h3>שם הבית</h3>
+      <div class="field">
+        <label>שם הבית / משפחה</label>
+        <input id="houseName" type="text" placeholder="למשל: בית לוי 🏡" maxlength="30"/>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h3>שותפים</h3>
+      <div class="member-list" id="memberList"></div>
+      <button class="add-member-btn" id="addMemberBtn">
+        <span style="font-size:20px">+</span> הוספת שותף
+      </button>
+    </div>
+
+    <button class="btn-primary" id="saveSetupBtn">שמירה והתחלה</button>
+    <button class="share-btn" id="shareBtn" style="display:none">
+      <span class="share-icon">🔗</span> שיתוף הלינק עם המשפחה
+    </button>
+    <button class="btn-secondary" id="cancelSetupBtn" style="display:none">ביטול</button>
+  </div>
+</div>
+
+<!-- ══ HOME VIEW ══════════════════════════════════ -->
+<div class="view hidden" id="home">
+  <div class="topbar">
+    <div>
+      <div class="house-name" id="houseNameEl">בית <em>שלנו</em></div>
+      <div style="margin-top:2px"><div class="members" id="membersEl"></div></div>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" id="darkToggle" title="החלף מצב תצוגה">🌙</button>
+      <button class="icon-btn" id="settingsBtn" title="הגדרות">⚙️</button>
+    </div>
+  </div>
+
+  <div class="scroll">
+    <p class="section-title">הרשימות שלנו</p>
+    <div class="lt-grid" id="ltGrid"></div>
+
+    <div class="new-lt-form" id="newLtForm">
+      <h3>רשימה חדשה</h3>
+      <div class="nlf-row">
+        <input class="emojifield" id="newEmoji" type="text" maxlength="2" placeholder="😊"/>
+        <input class="nlf-name" id="newListName" type="text" placeholder="שם הרשימה"/>
+        <button class="btn-sm-sq" id="creBtn">+</button>
+        <button class="btn-sm sec" id="cancelLtBtn">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LIST VIEW ══════════════════════════════════ -->
+<div class="view slide-right" id="list">
+  <div class="topbar">
+    <button class="back-btn" id="backBtn">&#8594;</button>
+    <span id="listEmoji" style="font-size:22px"></span>
+    <input id="listTitle" type="text"
+      style="flex:1;font-size:18px;font-weight:700;border:none;background:transparent;
+             color:var(--txt);outline:none;font-family:inherit;min-width:0;
+             border-bottom:1.5px dashed var(--bdr);transition:border-color .15s,border-style .15s"
+      onfocus="this.style.borderBottomColor='var(--pri)';this.style.borderBottomStyle='solid'"
+      onblur="this.style.borderBottomColor='var(--bdr)';this.style.borderBottomStyle='dashed';saveListName(this.value)"/>
+    <button class="edit-title-btn" id="editTitleBtn" title="עריכת שם">✏</button>
+    <button class="icon-btn" id="waShareBtn" title="שתף בוואטסאפ" style="font-size:20px">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><path d="M16 3C9.373 3 4 8.373 4 15c0 2.385.668 4.61 1.832 6.51L4 29l7.695-1.807A12.94 12.94 0 0 0 16 28c6.627 0 12-5.373 12-12S22.627 3 16 3Z" fill="#25D366"/><path d="M21.844 18.47c-.3-.15-1.77-.873-2.044-.973-.273-.1-.472-.15-.671.15-.2.3-.771.973-.945 1.173-.174.2-.348.225-.648.075-.3-.15-1.266-.467-2.412-1.488-.892-.795-1.494-1.776-1.67-2.076-.174-.3-.018-.462.13-.611.135-.135.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.671-1.62-.92-2.22-.242-.583-.488-.504-.671-.513l-.572-.01c-.2 0-.523.075-.797.375-.274.3-1.045 1.02-1.045 2.487s1.07 2.887 1.22 3.087c.148.2 2.108 3.22 5.11 4.513.715.308 1.272.492 1.708.63.717.228 1.37.196 1.886.119.576-.086 1.77-.724 2.02-1.423.249-.699.249-1.299.174-1.424-.074-.124-.273-.199-.572-.348Z" fill="#fff"/></svg>
+    </button>
+    <button class="icon-btn" id="resetListBtn" title="איפוס רשימה" style="font-size:16px">↺</button>
+    <button class="icon-btn" id="deleteListBtn" title="מחיקת רשימה" style="color:var(--mut)">🗑</button>
+  </div>
+
+  <div class="prog-row">
+    <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
+    <span class="plabel" id="plabel">0 / 0 בסל</span>
+  </div>
+
+  <div class="filters">
+    <button class="fbtn active" data-f="all">הכל</button>
+    <button class="fbtn" data-f="pending">לקנות</button>
+    <button class="fbtn" data-f="done">בסל</button>
+  </div>
+
+  <div class="items-wrap" id="itemsWrap"></div>
+</div>
+
+<!-- Quick-add bar -->
+<div class="qabar" id="qabar">
+  <div class="qarow">
+    <input class="qainput" id="qaInput" type="text" placeholder="הוספת פריט…" autocomplete="off"/>
+    <button class="qabtn" id="qaBtn">+</button>
+  </div>
+  <div class="qaopts">
+    <div class="qty-ctrl">
+      <button class="qty-btn" id="qaQtyMinus">−</button>
+      <input class="qaqty-inp" id="qaQty" type="text" inputmode="numeric" pattern="[0-9]*" value="1"/>
+      <button class="qty-btn" id="qaQtyPlus">+</button>
+    </div>
+    <select class="qasel" id="qaUnit">
+      <option>יח'</option><option>ק"ג</option><option>גרם</option>
+      <option>ליטר</option><option>מ"ל</option><option>אריזה</option>
+      <option>קופסה</option><option>שקית</option>
+    </select>
+    <div class="mchips" id="mchipsEl"></div>
+  </div>
+</div>
+
+<!-- Confirm delete list -->
+<div class="overlay" id="delOverlay">
+  <div class="sheet">
+    <h3>מחיקת רשימה</h3>
+    <p id="delMsg"></p>
+    <div class="sheet-actions">
+      <button class="btn-danger" id="delConfirm">מחיקה</button>
+      <button class="btn-cancel" id="delCancel">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- Color picker (reused) -->
+<div class="color-picker" id="colorPicker"></div>
+
+<div class="toast" id="toastEl"></div>
+
+<script>
+/* ── palette ─────────────────────────── */
+const PALETTE=['#5b4fcf','#e91e8c','#00bcd4','#e67e22','#27ae60','#e74c3c','#8e44ad','#1abc9c','#2980b9','#f39c12','#16a085','#c0392b'];
+
+/* ── default list types ──────────────── */
+const DEFAULT_TYPES=[
+  {id:'grocery', name:'סופר',     emoji:'🛒'},
+  {id:'pharmacy',name:'בית מרקחת',emoji:'💊'},
+  {id:'hardware',name:'חנות ברזל',emoji:'🔧'},
+  {id:'cleaning',name:'ניקיון',   emoji:'🧹'},
+  {id:'bakery',  name:'מאפייה',   emoji:'🥐'},
+];
+
+/* ── state ───────────────────────────── */
+let house={name:'',members:[]};  // {name, members:[{id,name,color}]}
+let listTypes=[], items={}, nextId=1, selMember=null, activeId=null, activeFilter='all', chipsExpanded=false;
+let colorTargetMemberId=null;
+
+/* ── storage ─────────────────────────── */
+const K={house:'sl3_house',types:'sl3_types',items:'sl3_items',next:'sl3_next'};
+function save(){
+  localStorage.setItem(K.house,JSON.stringify(house));
+  localStorage.setItem(K.types,JSON.stringify(listTypes));
+  localStorage.setItem(K.items,JSON.stringify(items));
+  localStorage.setItem(K.next, String(nextId));
+}
+function load(){
+  try{
+    house     =JSON.parse(localStorage.getItem(K.house)||'null')||{name:'',members:[]};
+    listTypes =JSON.parse(localStorage.getItem(K.types)||'null')||DEFAULT_TYPES.map(x=>({...x}));
+    items     =JSON.parse(localStorage.getItem(K.items)||'null')||{};
+    nextId    =parseInt(localStorage.getItem(K.next)||'1',10)||1;
+  }catch(_){
+    house={name:'',members:[]};
+    listTypes=DEFAULT_TYPES.map(x=>({...x}));
+    items={};nextId=1;
+  }
+  listTypes.forEach(lt=>{if(!items[lt.id])items[lt.id]=[];});
+}
+function uid(){return nextId++;}
+
+function isSetupDone(){return house.name.trim()&&house.members.length>0;}
+
+/* ── helpers ─────────────────────────── */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function getMember(id){return house.members.find(m=>m.id===id)||null;}
+function getLT(id){return listTypes.find(l=>l.id===id);}
+function activeList(){return items[activeId]||[];}
+function initials(name){
+  const parts=name.trim().split(/\s+/);
+  return parts.length>=2?(parts[0][0]+parts[1][0]).toUpperCase():name.slice(0,2).toUpperCase()||'?';
+}
+
+/* ── toast ───────────────────────────── */
+let toastT;
+function toast(msg){
+  const el=document.getElementById('toastEl');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.remove('show'),2400);
+}
+
+/* ══ COLOR PICKER ═══════════════════════════ */
+const cpEl=document.getElementById('colorPicker');
+function buildColorPicker(){
+  cpEl.innerHTML=PALETTE.map(c=>'<div class="cp-dot" style="background:'+c+'" data-color="'+c+'"></div>').join('');
+}
+cpEl.addEventListener('click',function(e){
+  const dot=e.target.closest('.cp-dot');
+  if(!dot)return;
+  const color=dot.dataset.color;
+  if(colorTargetMemberId){
+    const m=house.members.find(x=>x.id===colorTargetMemberId);
+    if(m){m.color=color;renderMemberList();}
+  }
+  cpEl.classList.remove('open');
+});
+document.addEventListener('click',function(e){
+  if(!cpEl.contains(e.target)&&!e.target.classList.contains('mem-av'))cpEl.classList.remove('open');
+});
+function openColorPicker(memberId,anchorEl){
+  colorTargetMemberId=memberId;
+  const r=anchorEl.getBoundingClientRect();
+  cpEl.style.top=(r.bottom+6+window.scrollY)+'px';
+  cpEl.style.right=(document.body.clientWidth-r.right)+'px';
+  cpEl.style.left='auto';
+  cpEl.classList.toggle('open');
+}
+
+/* ══ SETUP VIEW ══════════════════════════════ */
+let setupMode='setup'; // 'setup' | 'settings'
+let editMembers=[]; // working copy
+
+function openSetup(mode){
+  setupMode=mode;
+  // copy members for editing
+  editMembers=house.members.map(m=>({...m}));
+
+  document.getElementById('houseName').value=house.name||'';
+  document.getElementById('setupTopbar').style.display=mode==='settings'?'flex':'none';
+  document.getElementById('setupHeader').style.display=mode==='setup'?'block':'none';
+  document.getElementById('cancelSetupBtn').style.display=mode==='settings'?'block':'none';
+  document.getElementById('joinBanner').classList.remove('show');
+
+  renderMemberList();
+  updateShareBtnVisibility();
+
+  if(mode==='setup'){
+    document.getElementById('setup').classList.remove('hidden','slide-right');
+    document.getElementById('home').classList.add('hidden');
+  } else {
+    // from home → settings
+    document.getElementById('setup').classList.remove('hidden');
+    document.getElementById('setup').classList.add('slide-right');
+    requestAnimationFrame(()=>document.getElementById('setup').classList.remove('slide-right'));
+    document.getElementById('home').classList.add('hidden');
+  }
+}
+
+function renderMemberList(){
+  const list=document.getElementById('memberList');
+  list.innerHTML='';
+  editMembers.forEach((m,i)=>{
+    const row=document.createElement('div');
+    row.className='member-row';
+    row.style.animationDelay=(i*30)+'ms';
+
+    const av=document.createElement('div');
+    av.className='mem-av';av.style.background=m.color;
+    av.textContent=initials(m.name||'?');
+    av.title='שינוי צבע';
+    av.addEventListener('click',()=>openColorPicker(m.id,av));
+
+    const inp=document.createElement('input');
+    inp.className='mem-name-inp';inp.type='text';
+    inp.value=m.name;inp.placeholder='שם השותף';
+    inp.addEventListener('input',()=>{
+      m.name=inp.value;
+      av.textContent=initials(m.name||'?');
+    });
+
+    const del=document.createElement('button');
+    del.className='mem-del';del.textContent='✕';del.title='הסר';
+    del.addEventListener('click',()=>{
+      editMembers=editMembers.filter(x=>x.id!==m.id);
+      renderMemberList();
+    });
+
+    row.appendChild(av);row.appendChild(inp);row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('addMemberBtn').addEventListener('click',function(){
+  const usedColors=editMembers.map(m=>m.color);
+  const color=PALETTE.find(c=>!usedColors.includes(c))||PALETTE[editMembers.length%PALETTE.length];
+  editMembers.push({id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2),name:'',color});
+  renderMemberList();
+  // focus last input
+  const inputs=document.querySelectorAll('.mem-name-inp');
+  if(inputs.length)inputs[inputs.length-1].focus();
+});
+
+document.getElementById('saveSetupBtn').addEventListener('click',function(){
+  const hname=document.getElementById('houseName').value.trim();
+  if(!hname){document.getElementById('houseName').focus();toast('שם הבית חסר');return;}
+  const validMembers=editMembers.filter(m=>m.name.trim());
+  if(!validMembers.length){toast('יש להוסיף לפחות שותף אחד');return;}
+
+  house.name=hname;
+  house.members=validMembers.map(m=>({...m,name:m.name.trim()}));
+  save();
+
+  if(setupMode==='setup'){
+    document.getElementById('setup').classList.add('hidden');
+    document.getElementById('home').classList.remove('hidden');
+  } else {
+    // stay on settings to show share button
+    updateShareBtnVisibility();
+  }
+  renderHome();
+  toast('ההגדרות נשמרו ✓');
+});
+
+document.getElementById('cancelSetupBtn').addEventListener('click',goHome);
+document.getElementById('settingsBack').addEventListener('click',goHome);
+
+/* ══ HOME VIEW ═══════════════════════════════ */
+function renderHome(){
+  // house name
+  document.getElementById('houseNameEl').textContent=house.name||'הבית שלנו';
+
+  // member avatars
+  document.getElementById('membersEl').innerHTML=
+    house.members.map(m=>'<div class="av" style="background:'+m.color+';margin-right:-8px" title="'+esc(m.name)+'">'+initials(m.name)+'</div>').join('');
+
+  // list grid
+  const grid=document.getElementById('ltGrid');
+  grid.innerHTML='';
+  listTypes.forEach((lt,i)=>{
+    const list=items[lt.id]||[];
+    const total=list.length,done=list.filter(x=>x.checked).length,pending=total-done;
+    const pct=total?Math.round(done/total*100):0;
+    const card=document.createElement('div');
+    card.className='lt-card';card.style.animationDelay=(i*40)+'ms';
+    card.innerHTML='<div class="lt-emoji">'+lt.emoji+'</div>'
+      +'<div class="lt-name">'+esc(lt.name)+'</div>'
+      +'<div class="lt-count">'+pending+' לקנות'+(total?' · '+done+'/'+total:'')+'</div>'
+      +'<div class="lt-bar"><div class="lt-fill" style="width:'+pct+'%"></div></div>';
+    card.addEventListener('click',()=>openList(lt.id));
+    grid.appendChild(card);
+  });
+  // add card
+  const add=document.createElement('div');
+  add.className='lt-card add-card';
+  add.innerHTML='<div class="plus">+</div><span>רשימה חדשה</span>';
+  add.addEventListener('click',()=>document.getElementById('newLtForm').classList.add('open'));
+  grid.appendChild(add);
+}
+
+document.getElementById('settingsBtn').addEventListener('click',()=>openSetup('settings'));
+
+// new list type form
+document.getElementById('cancelLtBtn').addEventListener('click',()=>document.getElementById('newLtForm').classList.remove('open'));
+document.getElementById('creBtn').addEventListener('click',function(){
+  const emoji=document.getElementById('newEmoji').value.trim()||'📋';
+  const name=document.getElementById('newListName').value.trim();
+  if(!name){document.getElementById('newListName').focus();return;}
+  const lt={id:'lt_'+Date.now(),name,emoji};
+  listTypes.push(lt);items[lt.id]=[];save();
+  document.getElementById('newEmoji').value='';
+  document.getElementById('newListName').value='';
+  document.getElementById('newLtForm').classList.remove('open');
+  renderHome();
+  toast('רשימת "'+name+'" נוצרה');
+});
+
+/* ══ LIST VIEW ═══════════════════════════════ */
+function openList(id){
+  activeId=id;activeFilter='all';chipsExpanded=false;
+  const lt=getLT(id);
+  document.getElementById('listEmoji').textContent=lt.emoji;
+  document.getElementById('listTitle').value=lt.name;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.toggle('active',b.dataset.f==='all'));
+  renderListView();renderChips();
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('list').classList.remove('slide-right');
+  document.getElementById('qabar').classList.add('visible');
+  document.getElementById('qaInput').focus();
+}
+
+function goHome(){
+  document.getElementById('list').classList.add('slide-right');
+  document.getElementById('setup').classList.add('slide-right');
+  document.getElementById('home').classList.remove('hidden');
+  document.getElementById('qabar').classList.remove('visible');
+  renderHome();
+}
+document.getElementById('backBtn').addEventListener('click',goHome);
+
+function renderListView(){
+  const wrap=document.getElementById('itemsWrap');
+  const list=filtered(activeList());
+  updateProgress(activeList());
+  if(!list.length){
+    const lt=getLT(activeId);
+    wrap.innerHTML='<div class="empty-list"><div class="ei">'+lt.emoji+'</div>'
+      +'<p>'+(activeList().length?'אין פריטים בפילטר הנוכחי.':'הרשימה ריקה.<br>הוספת פריטים אפשרית למטה.')+'</p></div>';
+    return;
+  }
+  wrap.innerHTML='';
+  list.forEach(item=>wrap.appendChild(buildCard(item)));
+}
+
+function filtered(list){
+  if(activeFilter==='pending')return list.filter(i=>!i.checked);
+  if(activeFilter==='done')   return list.filter(i=>i.checked);
+  return list;
+}
+
+function updateProgress(list){
+  const total=list.length,done=list.filter(i=>i.checked).length;
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById('pfill').style.width=pct+'%';
+  document.getElementById('plabel').textContent=done+' / '+total+' בסל';
+}
+
+function buildCard(item){
+  const m=getMember(item.assignee);
+  const card=document.createElement('div');
+  card.className='item-card'+(item.checked?' checked':'');
+  card.dataset.id=String(item.id);
+
+  const chk=document.createElement('button');
+  chk.className='chk'+(item.checked?' on':'');
+  chk.dataset.action='check';
+
+  const info=document.createElement('div');
+  info.className='iinfo';
+  const whoHtml=m?'<span class="who-badge" style="background:'+m.color+'">'+esc(m.name)+'</span>':'';
+  info.innerHTML='<div class="iname">'+esc(item.name)+'</div>'
+    +'<div class="imeta"><span class="qty-badge">'+esc(String(item.qty))+' '+esc(item.unit)+'</span>'+whoHtml+'</div>';
+
+  const del=document.createElement('button');
+  del.className='delbtn';del.dataset.action='delete';del.title='הסר';del.textContent='✕';
+
+  card.appendChild(chk);card.appendChild(info);
+  if(m){
+    const ad=document.createElement('div');
+    ad.className='adot';ad.style.background=m.color;
+    ad.title=m.name;ad.textContent=initials(m.name);
+    card.appendChild(ad);
+  }
+  card.appendChild(del);
+  return card;
+}
+
+/* ── Add (real-time) ─────────────────── */
+function submitItem(){
+  const input=document.getElementById('qaInput');
+  const name=input.value.trim();
+  if(!name){input.focus();return;}
+  const item={
+    id:uid(),name,
+    qty:Math.max(1,parseInt(document.getElementById('qaQty').value,10)||1),
+    unit:document.getElementById('qaUnit').value,
+    assignee:selMember,checked:false,
+  };
+  if(!items[activeId])items[activeId]=[];
+  items[activeId].unshift(item);save();
+
+  const wrap=document.getElementById('itemsWrap');
+  const empty=wrap.querySelector('.empty-list');
+  if(empty)wrap.innerHTML='';
+
+  if(activeFilter==='all'||activeFilter==='pending'){
+    const card=buildCard(item);
+    wrap.insertBefore(card,wrap.firstChild);
+  }
+  updateProgress(activeList());
+  input.value='';input.focus();
+  toast('"'+name+'" נוסף ✓');
+}
+
+/* ── Remove (animated) ───────────────── */
+function removeItem(card){
+  const id=parseInt(card.dataset.id,10);
+  let gone=false;
+  const finish=()=>{
+    if(gone)return;gone=true;
+    const name=(activeList().find(i=>i.id===id)||{}).name||'';
+    items[activeId]=(items[activeId]||[]).filter(i=>i.id!==id);
+    save();card.remove();
+    updateProgress(activeList());
+    if(!document.querySelectorAll('#itemsWrap .item-card').length)renderListView();
+    toast('"'+name+'" הוסר');
+  };
+  card.classList.add('out');
+  card.addEventListener('transitionend',finish,{once:true});
+  setTimeout(finish,350);
+}
+
+/* ── Toggle check (real-time) ────────── */
+function toggleCheck(card){
+  const id=parseInt(card.dataset.id,10);
+  const item=(activeList()).find(i=>i.id===id);
+  if(!item)return;
+  item.checked=!item.checked;save();
+  const chk=card.querySelector('.chk');
+  if(item.checked){card.classList.add('checked');chk.classList.add('on');}
+  else{card.classList.remove('checked');chk.classList.remove('on');}
+  updateProgress(activeList());
+  if((activeFilter==='pending'&&item.checked)||(activeFilter==='done'&&!item.checked)){
+    setTimeout(()=>{
+      let gone=false;
+      const f=()=>{if(gone)return;gone=true;card.remove();if(!document.querySelectorAll('#itemsWrap .item-card').length)renderListView();};
+      card.classList.add('out');card.addEventListener('transitionend',f,{once:true});setTimeout(f,350);
+    },400);
+  }
+}
+
+/* ── Event delegation ────────────────── */
+document.getElementById('itemsWrap').addEventListener('click',function(e){
+  const card=e.target.closest('.item-card');if(!card)return;
+  const a=e.target.closest('[data-action]');if(!a)return;
+  if(a.dataset.action==='check') toggleCheck(card);
+  if(a.dataset.action==='delete')removeItem(card);
+});
+
+/* ── Filters ─────────────────────────── */
+document.querySelector('.filters').addEventListener('click',function(e){
+  const btn=e.target.closest('.fbtn');if(!btn)return;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter=btn.dataset.f;
+  renderListView();
+});
+
+/* ── Quick-add events ────────────────── */
+document.getElementById('qaBtn').addEventListener('click',submitItem);
+document.getElementById('qaInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitItem();});
+document.getElementById('mchipsEl').addEventListener('click',function(e){
+  const more=e.target.closest('.mchip-more');
+  if(more){chipsExpanded=!chipsExpanded;renderChips();return;}
+  const chip=e.target.closest('.mchip');if(!chip)return;
+  selMember=selMember===chip.dataset.mid?null:chip.dataset.mid;
+  renderChips();
+});
+
+function renderChips(){
+  const el=document.getElementById('mchipsEl');
+  const members=house.members;
+  const SHOW=2;
+  const chipHtml=m=>'<div class="mchip'+(selMember===m.id?' on':'')+'" style="background:'+m.color+'" data-mid="'+m.id+'" title="'+esc(m.name)+'">'+initials(m.name)+'</div>';
+  if(members.length<=SHOW||chipsExpanded){
+    el.innerHTML=members.map(chipHtml).join('');
+    if(chipsExpanded&&members.length>SHOW)
+      el.innerHTML+='<div class="mchip mchip-more" data-more="1">−</div>';
+  } else {
+    el.innerHTML=members.slice(0,SHOW).map(chipHtml).join('')
+      +'<div class="mchip mchip-more" data-more="1">+'+(members.length-SHOW)+'</div>';
+  }
+}
+
+/* ── WhatsApp share ──────────────────── */
+document.getElementById('waShareBtn').addEventListener('click', function () {
+  const lt   = getLT(activeId);
+  const list = activeList();
+
+  if (!list.length) { toast('הרשימה ריקה — אין מה לשתף'); return; }
+
+  const pending = list.filter(i => !i.checked);
+  const done    = list.filter(i =>  i.checked);
+
+  const fmtItem = i => {
+    const m    = getMember(i.assignee);
+    const who  = m ? ' (' + m.name + ')' : '';
+    const qty  = i.qty + ' ' + i.unit;
+    return '☐ ' + i.name + ' — ' + qty + who;
+  };
+
+  const lines = [];
+  lines.push(lt.emoji + ' רשימת ' + lt.name);
+  if (house.name) lines.push('🏠 ' + house.name);
+  lines.push('─'.repeat(24));
+
+  if (pending.length) {
+    lines.push('*לקנות (' + pending.length + '):*');
+    pending.forEach(i => lines.push(fmtItem(i)));
+  }
+
+  if (done.length) {
+    if (pending.length) lines.push('');
+    lines.push('*כבר בסל (' + done.length + '):*');
+    done.forEach(i => lines.push('✓ ' + i.name + ' — ' + i.qty + ' ' + i.unit));
+  }
+
+  lines.push('─'.repeat(24));
+  lines.push('_נשלח מאפליקציית קניות משפחתיות_');
+
+  const text = lines.join('\n');
+  const url  = 'https://wa.me/?text=' + encodeURIComponent(text);
+  window.open(url, '_blank');
+});
+
+/* ── Qty +/- buttons ─────────────────── */
+document.getElementById('qaQtyMinus').addEventListener('click',function(){
+  const inp=document.getElementById('qaQty');
+  const v=Math.max(1,parseInt(inp.value,10)||1);
+  inp.value=Math.max(1,v-1);
+});
+document.getElementById('qaQtyPlus').addEventListener('click',function(){
+  const inp=document.getElementById('qaQty');
+  const v=Math.max(1,parseInt(inp.value,10)||1);
+  inp.value=v+1;
+});
+
+/* ── Pencil button focuses title ─────── */
+document.getElementById('editTitleBtn').addEventListener('click',function(){
+  const inp=document.getElementById('listTitle');
+  inp.focus();inp.select();
+});
+
+/* ── Edit list name ──────────────────── */
+function saveListName(val) {
+  const name = val.trim();
+  if (!name) {
+    document.getElementById('listTitle').value = getLT(activeId).name;
+    return;
+  }
+  const lt = getLT(activeId);
+  if (lt && name !== lt.name) {
+    lt.name = name;
+    save();
+    toast('שם הרשימה עודכן');
+  }
+}
+document.getElementById('listTitle').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') this.blur();
+});
+
+/* ── Reset list ──────────────────────── */
+document.getElementById('resetListBtn').addEventListener('click',function(){
+  const list=activeList();
+  if(!list.some(i=>i.checked)){toast('אין פריטים מסומנים לאיפוס');return;}
+  list.forEach(i=>i.checked=false);
+  save();renderListView();
+  toast('הרשימה אופסה ✓');
+});
+
+/* ── Delete list ─────────────────────── */
+document.getElementById('deleteListBtn').addEventListener('click',function(){
+  if(listTypes.length<=1){toast('לא ניתן למחוק את הרשימה האחרונה');return;}
+  const lt=getLT(activeId);
+  document.getElementById('delMsg').textContent='האם למחוק את הרשימה "'+lt.name+'"?';
+  document.getElementById('delOverlay').classList.add('open');
+});
+document.getElementById('delCancel').addEventListener('click',()=>document.getElementById('delOverlay').classList.remove('open'));
+document.getElementById('delConfirm').addEventListener('click',function(){
+  document.getElementById('delOverlay').classList.remove('open');
+  const name=(getLT(activeId)||{}).name||'';
+  listTypes=listTypes.filter(l=>l.id!==activeId);
+  delete items[activeId];
+  activeId=listTypes[0]?.id||null;
+  save();goHome();
+  toast('רשימת "'+name+'" נמחקה');
+});
+
+/* ══ SHARE URL ════════════════════════════════ */
+function encodeHouseConfig(h){
+  const json=JSON.stringify({name:h.name,members:h.members});
+  // unicode-safe base64
+  const b64=btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/gi,(_,p)=>String.fromCharCode(parseInt(p,16))));
+  return b64;
+}
+function decodeHouseConfig(b64){
+  try{
+    const json=decodeURIComponent(Array.from(atob(b64),c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
+    return JSON.parse(json);
+  }catch(_){return null;}
+}
+function buildShareURL(){
+  const base=location.href.split('#')[0];
+  return base+'#join='+encodeHouseConfig(house);
+}
+
+let shareTimer;
+document.getElementById('shareBtn').addEventListener('click',function(){
+  const url=buildShareURL();
+  navigator.clipboard.writeText(url).then(()=>{
+    this.innerHTML='<span class="share-icon">✓</span> הלינק הועתק!';
+    this.classList.add('copy-ok');
+    clearTimeout(shareTimer);
+    shareTimer=setTimeout(()=>{
+      this.innerHTML='<span class="share-icon">🔗</span> שיתוף הלינק עם המשפחה';
+      this.classList.remove('copy-ok');
+    },2500);
+  }).catch(()=>{
+    prompt('העתקת הלינק:',url);
+  });
+});
+
+/* ══ JOIN (share link) handling ════════════════ */
+let joinConfig=null; // config decoded from URL
+
+function parseJoinHash(){
+  const hash=location.hash;
+  const m=hash.match(/[#&]join=([^&]+)/);
+  if(!m)return null;
+  return decodeHouseConfig(m[1]);
+}
+
+function showJoinBanner(cfg){
+  document.getElementById('joinBannerTitle').textContent='הוזמנת לבית "'+cfg.name+'"';
+  document.getElementById('joinBannerSub').textContent=
+    cfg.members.map(m=>m.name).join(', ')+' · '+cfg.members.length+' שותפים';
+  document.getElementById('joinBanner').classList.add('show');
+  // pre-fill form
+  document.getElementById('houseName').value=cfg.name;
+  editMembers=cfg.members.map(m=>({...m}));
+  renderMemberList();
+  // hide normal header text
+  document.getElementById('setupHeader').style.display='none';
+}
+
+document.getElementById('joinConfirmBtn').addEventListener('click',function(){
+  if(!joinConfig)return;
+  house.name=joinConfig.name;
+  house.members=joinConfig.members;
+  save();
+  document.getElementById('joinBanner').classList.remove('show');
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('home').classList.remove('hidden');
+  // clear hash so refreshing doesn't re-trigger
+  history.replaceState(null,'',location.pathname+location.search);
+  renderHome();
+  toast('ברוכים הבאים לבית "'+house.name+'" ✓');
+});
+
+document.getElementById('joinSkipBtn').addEventListener('click',function(){
+  joinConfig=null;
+  document.getElementById('joinBanner').classList.remove('show');
+  document.getElementById('setupHeader').style.display='block';
+  document.getElementById('houseName').value='';
+  editMembers=[];
+  renderMemberList();
+});
+
+/* show share btn when in settings mode */
+function updateShareBtnVisibility(){
+  document.getElementById('shareBtn').style.display=
+    (setupMode==='settings'&&isSetupDone())?'flex':'none';
+}
+
+/* ══ DARK MODE ═══════════════════════════════ */
+function applyTheme(dark){
+  document.body.classList.toggle('dark', dark);
+  document.getElementById('darkToggle').textContent = dark ? '☀️' : '🌙';
+}
+document.getElementById('darkToggle').addEventListener('click', function(){
+  const isDark = !document.body.classList.contains('dark');
+  localStorage.setItem('sl3_dark', isDark ? '1' : '0');
+  applyTheme(isDark);
+});
+
+/* ══ BOOT ════════════════════════════════════ */
+buildColorPicker();
+applyTheme(localStorage.getItem('sl3_dark') === '1');
+load();
+joinConfig=parseJoinHash();
+
+if(joinConfig){
+  // opened via share link
+  document.getElementById('setup').classList.remove('slide-right','hidden');
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('setupTopbar').style.display='none';
+  document.getElementById('setupHeader').style.display='none';
+  document.getElementById('cancelSetupBtn').style.display='none';
+  document.getElementById('shareBtn').style.display='none';
+  editMembers=joinConfig.members.map(m=>({...m}));
+  showJoinBanner(joinConfig);
+} else if(!isSetupDone()){
+  document.getElementById('setup').classList.remove('slide-right');
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('shareBtn').style.display='none';
+} else {
+  document.getElementById('home').classList.remove('hidden');
+  document.getElementById('setup').classList.add('slide-right');
+  renderHome();
+}
+</script>
+</body>
+</html>
