@@ -173,14 +173,13 @@ a,button,input,select{touch-action:manipulation}
 .qty-badge{background:var(--bg);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600;color:var(--txt)}
 .who-badge{padding:1px 8px;border-radius:6px;font-size:11px;font-weight:600;color:#fff}
 .adot{width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.item-ctrl{display:flex;flex-direction:column;gap:3px;flex-shrink:0;align-self:center}
-.ctrl-btn{width:28px;height:25px;border-radius:7px;border:1.5px solid var(--bdr);background:transparent;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,transform .1s;line-height:1;flex-shrink:0}
-.ctrl-btn:active{transform:scale(.88)}
-.ctrl-inc{color:var(--pri);border-color:var(--pri)}
-.ctrl-inc:active{background:var(--pril)}
-.ctrl-dec{color:var(--txt);opacity:.65}
-.ctrl-dec:active{background:var(--bg)}
-.ctrl-del{color:var(--red);border-color:rgba(231,76,60,.35);opacity:.8}
+.item-ctrl{display:flex;align-items:center;flex-shrink:0;gap:6px}
+.ctrl-stepper{display:flex;border:1.5px solid var(--bdr);border-radius:8px;overflow:hidden;background:var(--bg)}
+.ctrl-btn{height:32px;width:30px;border:none;background:transparent;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s;flex-shrink:0;line-height:1;padding:0}
+.ctrl-inc{color:var(--pri)}
+.ctrl-dec{color:var(--txt);opacity:.7;border-inline-end:1px solid var(--bdr)}
+.ctrl-btn:active{background:var(--pril)}
+.ctrl-del{height:32px;width:30px;border-radius:8px;border:1.5px solid rgba(231,76,60,.4);background:transparent;color:var(--red);cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:background .12s;flex-shrink:0;padding:0}
 .ctrl-del:active{background:#fdecea}
 
 .empty-list{text-align:center;padding:60px 20px;color:var(--mut)}
@@ -732,9 +731,11 @@ function buildCard(item){
 
   const ctrl=document.createElement('div');
   ctrl.className='item-ctrl';
-  ctrl.innerHTML='<button class="ctrl-btn ctrl-inc" data-action="increase" title="הוסף">+</button>'
+  ctrl.innerHTML='<div class="ctrl-stepper">'
     +'<button class="ctrl-btn ctrl-dec" data-action="decrease" title="הפחת">−</button>'
-    +'<button class="ctrl-btn ctrl-del" data-action="delete" title="מחיקה">✕</button>';
+    +'<button class="ctrl-btn ctrl-inc" data-action="increase" title="הוסף">+</button>'
+    +'</div>'
+    +'<button class="ctrl-del" data-action="delete" title="מחיקה">✕</button>';
 
   card.appendChild(chk);card.appendChild(info);
   if(m){
