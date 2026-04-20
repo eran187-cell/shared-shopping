@@ -98,9 +98,10 @@ a,button,input,select{touch-action:manipulation}
 .setup-topbar h2{flex:1;font-size:18px;font-weight:700}
 
 /* ══ HOME view ═══════════════════════════════════════ */
-#home .topbar{background:var(--sur);padding:16px 20px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
-.house-name{font-size:18px;font-weight:700;color:var(--txt)}
-.topbar-right{display:flex;align-items:center;gap:8px}
+#home .topbar{background:var(--sur);padding:14px 20px 12px;border-bottom:1px solid var(--bdr);display:flex;flex-direction:column;align-items:stretch;position:sticky;top:0;z-index:10}
+.house-name{font-size:18px;font-weight:700;color:var(--txt);margin-bottom:6px}
+.topbar-row2{display:flex;align-items:center;justify-content:space-between}
+.topbar-right{display:flex;align-items:center;gap:4px}
 .members{display:flex}
 .av{width:30px;height:30px;border-radius:50%;border:2px solid var(--sur);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;margin-right:-8px;cursor:default;flex-shrink:0}
 .icon-btn{width:36px;height:36px;border-radius:10px;border:none;background:transparent;color:var(--mut);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
@@ -238,8 +239,8 @@ a,button,input,select{touch-action:manipulation}
 .qaqty-inp{width:38px;text-align:center;border:none;border-left:1px solid var(--bdr);border-right:1px solid var(--bdr);background:transparent;font-size:15px;color:var(--txt);outline:none;font-family:inherit;padding:8px 2px;-webkit-appearance:none}
 
 /* Edit-title pencil icon */
-.edit-title-btn{width:26px;height:26px;border:none;background:transparent;color:var(--txt);font-size:13px;cursor:pointer;flex-shrink:0;opacity:.55;transition:opacity .15s,color .15s;display:flex;align-items:center;justify-content:center;padding:0}
-.edit-title-btn:hover{opacity:1;color:var(--pri)}
+.edit-title-btn{width:36px;height:36px;border:none;background:transparent;color:var(--txt);font-size:18px;cursor:pointer;flex-shrink:0;opacity:.55;border-radius:10px;transition:background .15s,opacity .15s,color .15s;display:flex;align-items:center;justify-content:center;padding:0}
+.edit-title-btn:hover{background:var(--bg);opacity:1;color:var(--pri)}
 
 /* Confirm sheet */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -325,13 +326,13 @@ a,button,input,select{touch-action:manipulation}
 <!-- ══ HOME VIEW ══════════════════════════════════ -->
 <div class="view hidden" id="home">
   <div class="topbar">
-    <div>
-      <div class="house-name" id="houseNameEl">בית <em>שלנו</em></div>
-      <div style="margin-top:2px"><div class="members" id="membersEl"></div></div>
-    </div>
-    <div class="topbar-right">
-      <button class="icon-btn" id="darkToggle" title="החלף מצב תצוגה">🌙</button>
-      <button class="icon-btn" id="settingsBtn" title="הגדרות">⚙️</button>
+    <div class="house-name" id="houseNameEl">בית <em>שלנו</em></div>
+    <div class="topbar-row2">
+      <div class="members" id="membersEl"></div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="darkToggle" title="החלף מצב תצוגה">🌙</button>
+        <button class="icon-btn" id="settingsBtn" title="הגדרות">⚙️</button>
+      </div>
     </div>
   </div>
 
@@ -363,11 +364,11 @@ a,button,input,select{touch-action:manipulation}
       onfocus="this.style.borderBottomColor='var(--pri)';this.style.borderBottomStyle='solid'"
       onblur="this.style.borderBottomColor='var(--bdr)';this.style.borderBottomStyle='dashed';saveListName(this.value)"/>
     <button class="edit-title-btn" id="editTitleBtn" title="עריכת שם">✏</button>
-    <button class="icon-btn" id="waShareBtn" title="שתף בוואטסאפ" style="font-size:20px">
-      <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><path d="M16 3C9.373 3 4 8.373 4 15c0 2.385.668 4.61 1.832 6.51L4 29l7.695-1.807A12.94 12.94 0 0 0 16 28c6.627 0 12-5.373 12-12S22.627 3 16 3Z" fill="#25D366"/><path d="M21.844 18.47c-.3-.15-1.77-.873-2.044-.973-.273-.1-.472-.15-.671.15-.2.3-.771.973-.945 1.173-.174.2-.348.225-.648.075-.3-.15-1.266-.467-2.412-1.488-.892-.795-1.494-1.776-1.67-2.076-.174-.3-.018-.462.13-.611.135-.135.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.671-1.62-.92-2.22-.242-.583-.488-.504-.671-.513l-.572-.01c-.2 0-.523.075-.797.375-.274.3-1.045 1.02-1.045 2.487s1.07 2.887 1.22 3.087c.148.2 2.108 3.22 5.11 4.513.715.308 1.272.492 1.708.63.717.228 1.37.196 1.886.119.576-.086 1.77-.724 2.02-1.423.249-.699.249-1.299.174-1.424-.074-.124-.273-.199-.572-.348Z" fill="#fff"/></svg>
+    <button class="icon-btn" id="waShareBtn" title="שיתוף" style="color:var(--txt);opacity:.55">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
     </button>
-    <button class="icon-btn" id="resetListBtn" title="איפוס רשימה" style="font-size:16px;color:var(--txt);opacity:.55">↺</button>
-    <button class="icon-btn" id="deleteListBtn" title="מחיקת רשימה" style="color:var(--mut)">🗑</button>
+    <button class="icon-btn" id="resetListBtn" title="איפוס רשימה" style="color:var(--txt);opacity:.55">↺</button>
+    <button class="icon-btn" id="deleteListBtn" title="מחיקת רשימה" style="color:var(--txt);opacity:.55">🗑</button>
   </div>
 
   <div class="prog-row">
@@ -883,8 +884,11 @@ document.getElementById('waShareBtn').addEventListener('click', function () {
   lines.push('_נשלח מאפליקציית קניות משפחתיות_');
 
   const text = lines.join('\n');
-  const url  = 'https://wa.me/?text=' + encodeURIComponent(text);
-  window.open(url, '_blank');
+  if (navigator.share) {
+    navigator.share({ title: lt.emoji + ' ' + lt.name, text }).catch(()=>{});
+  } else {
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  }
 });
 
 /* ── Qty +/- buttons ─────────────────── */
