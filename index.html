@@ -298,11 +298,10 @@ a,button,input,select{touch-action:manipulation}
 .onboard-icon{font-size:48px;text-align:center}
 .onboard-title{font-size:22px;font-weight:700;text-align:center}
 .onboard-sub{font-size:14px;color:var(--mut);text-align:center;margin-bottom:2px}
-.onboard-or{font-size:13px;color:var(--mut);text-align:center;padding:2px 0}
-.onboard-join-row{display:flex;gap:8px;width:100%}
+.onboard-or{font-size:13px;color:var(--mut);text-align:center;padding:4px 0}
 .onboard-code-inp{
-  flex:1;min-width:0;
-  padding:11px 10px;border-radius:10px;border:1.5px solid var(--bdr);
+  width:100%;
+  padding:13px 14px;border-radius:10px;border:1.5px solid var(--bdr);
   background:var(--bg);font-size:18px;color:var(--txt);outline:none;
   font-family:monospace;text-align:center;letter-spacing:3px;text-transform:uppercase;
 }
@@ -477,10 +476,8 @@ a,button,input,select{touch-action:manipulation}
     <p class="onboard-sub">סנכרון בזמן אמת עם כל המשפחה</p>
     <button class="btn-primary" id="createHouseBtn" style="width:100%;font-size:15px">✨ יצירת בית חדש</button>
     <div class="onboard-or">— או הצטרפות לבית קיים —</div>
-    <div class="onboard-join-row">
-      <input id="joinCodeInput" class="onboard-code-inp" placeholder="קוד הבית" maxlength="8" autocomplete="off" autocapitalize="characters" inputmode="text"/>
-      <button class="btn-primary" id="joinHouseBtn" style="flex-shrink:0;white-space:nowrap">הצטרפות</button>
-    </div>
+    <input id="joinCodeInput" class="onboard-code-inp" placeholder="קוד הבית" maxlength="8" autocomplete="off" autocapitalize="characters" inputmode="text"/>
+    <button class="btn-primary" id="joinHouseBtn" style="width:100%;font-size:15px">הצטרפות לבית קיים</button>
     <div id="joinError" class="onboard-error"></div>
   </div>
 </div>
