@@ -9,6 +9,7 @@
 <link rel="manifest" href="manifest.json"/>
 <meta name="apple-mobile-web-app-title" content="Shared Shopping"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1186,16 +1187,35 @@ window.addEventListener('beforeinstallprompt',e=>{
 });
 window.addEventListener('appinstalled',()=>{
   _installPrompt=null;
+  localStorage.setItem('sl3_installed','1');
   _refreshInstallBtns();
+  toast('האפליקציה נוספה לדף הבית ✓');
 });
 
 function _refreshInstallBtns(){
-  // homeInstallBtn — always visible (unless already standalone)
+  const installed=_isStandalone()||localStorage.getItem('sl3_installed')==='1';
+  // homeInstallBtn — always visible unless confirmed installed
   const homeBtn=document.getElementById('homeInstallBtn');
-  if(homeBtn)homeBtn.style.display=_isStandalone()?'none':'flex';
-  // installBtn in settings — show only when setup is done
+  if(homeBtn){
+    homeBtn.style.display=installed?'none':'flex';
+    homeBtn.textContent=installed?'✓':'📲';
+    homeBtn.title=installed?'מותקן':'הוספה לדף הבית';
+  }
+  // installBtn in settings
   const instBtn=document.getElementById('installBtn');
-  if(instBtn)instBtn.style.display=(!_isStandalone()&&isSetupDone())?'flex':'none';
+  if(instBtn){
+    if(installed){
+      instBtn.style.display=isSetupDone()?'flex':'none';
+      instBtn.innerHTML='<span>✓</span> האפליקציה מותקנת בדף הבית';
+      instBtn.style.opacity='0.6';instBtn.style.cursor='default';
+      instBtn.onclick=null;
+    } else {
+      instBtn.style.display=isSetupDone()?'flex':'none';
+      instBtn.style.opacity='';instBtn.style.cursor='pointer';
+      instBtn.innerHTML='<span>📲</span> הוספת קיצור לדף הבית';
+      instBtn.onclick=showInstallFlow;
+    }
+  }
 }
 
 function showInstallFlow(){
