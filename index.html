@@ -1187,11 +1187,12 @@ window.addEventListener('appinstalled',()=>{
 });
 
 function _refreshInstallBtns(){
-  const show=!_isStandalone()&&(_installPrompt||_isIOS);
-  ['homeInstallBtn','installBtn'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el)el.style.display=show?'flex':'none';
-  });
+  // homeInstallBtn — always visible (unless already standalone)
+  const homeBtn=document.getElementById('homeInstallBtn');
+  if(homeBtn)homeBtn.style.display=_isStandalone()?'none':'flex';
+  // installBtn in settings — show only when setup is done
+  const instBtn=document.getElementById('installBtn');
+  if(instBtn)instBtn.style.display=(!_isStandalone()&&isSetupDone())?'flex':'none';
 }
 
 function showInstallFlow(){
