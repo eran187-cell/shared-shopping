@@ -369,7 +369,7 @@ a,button,input,select{touch-action:manipulation}
       </button>
     </div>
 
-    <button class="btn-primary" id="saveSetupBtn">שמירה והתחלה</button>
+    <button class="btn-primary" id="saveSetupBtn">בואו נתחיל ←</button>
     <button class="share-btn" id="shareBtn" style="display:none">
       <span class="share-icon">🔗</span> שליחת קישור להצטרפות
     </button>
@@ -663,6 +663,7 @@ function openSetup(mode){
   document.getElementById('houseName').value=house.name||'';
   document.getElementById('setupTopbar').style.display=mode==='settings'?'flex':'none';
   document.getElementById('setupHeader').style.display=mode==='setup'?'block':'none';
+  document.getElementById('saveSetupBtn').style.display=mode==='setup'?'block':'none';
   document.getElementById('cancelSetupBtn').style.display=mode==='settings'?'block':'none';
   const hcc=document.getElementById('houseCodeCard');
   if(houseId&&mode==='settings'){
@@ -731,32 +732,38 @@ document.getElementById('addMemberBtn').addEventListener('click',function(){
   if(inputs.length)inputs[inputs.length-1].focus();
 });
 
-document.getElementById('saveSetupBtn').addEventListener('click',function(){
+function commitSettings(){
   const hname=document.getElementById('houseName').value.trim();
-  if(!hname){document.getElementById('houseName').focus();toast('שם הבית חסר');return;}
+  if(!hname){document.getElementById('houseName').focus();toast('שם הבית חסר');return false;}
   const validMembers=editMembers.filter(m=>m.name.trim());
-  if(!validMembers.length){toast('יש להוסיף לפחות שותף אחד');return;}
-
+  if(!validMembers.length){toast('יש להוסיף לפחות שותף אחד');return false;}
   house.name=hname;
   house.members=validMembers.map(m=>({...m,name:m.name.trim()}));
   save();
+  return true;
+}
 
-  if(setupMode==='setup'){
-    startListener(houseId);
-    document.getElementById('setup').classList.add('hidden');
-    document.getElementById('home').classList.remove('hidden');
-    renderHome();
-    toast('הבית נוצר ✓');
-    setTimeout(showInstallFlow, 800);
-  } else {
-    updateShareBtnVisibility();
-    renderHome();
-    toast('ההגדרות נשמרו ✓');
-  }
+// First-time setup: explicit "let's go" button
+document.getElementById('saveSetupBtn').addEventListener('click',function(){
+  if(!commitSettings())return;
+  startListener(houseId);
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('home').classList.remove('hidden');
+  renderHome();
+  toast('הבית נוצר ✓');
+  setTimeout(showInstallFlow,800);
 });
 
+// Settings mode: back arrow saves automatically
+document.getElementById('settingsBack').addEventListener('click',function(){
+  if(!commitSettings())return;
+  renderHome();
+  goHome();
+  toast('ההגדרות נשמרו ✓');
+});
+
+// Cancel: discard changes and go home
 document.getElementById('cancelSetupBtn').addEventListener('click',goHome);
-document.getElementById('settingsBack').addEventListener('click',goHome);
 
 /* ══ HOME VIEW ═══════════════════════════════ */
 function renderHome(){
