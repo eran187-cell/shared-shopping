@@ -77,9 +77,10 @@ a,button,input,select{touch-action:manipulation}
 .member-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border-radius:10px;border:1.5px solid var(--bdr);animation:fadeUp .2s ease both}
 .mem-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;cursor:pointer;transition:transform .15s}
 .mem-av:hover{transform:scale(1.1)}
-.mem-name-inp{flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--bdr);background:var(--sur);font-size:16px;color:var(--txt);outline:none;font-family:inherit;-webkit-appearance:none}
+.mem-inp-wrap{flex:1;position:relative;min-width:0}
+.mem-name-inp{width:100%;padding:8px 10px 8px 34px;border-radius:8px;border:1.5px solid var(--bdr);background:var(--sur);font-size:16px;color:var(--txt);outline:none;font-family:inherit;-webkit-appearance:none}
 .mem-name-inp:focus{border-color:var(--pri)}
-.mem-del{width:30px;height:30px;border-radius:8px;border:none;background:transparent;color:var(--mut);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.mem-del{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:6px;border:none;background:transparent;color:var(--mut);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
 .mem-del:hover{background:#fdecea;color:var(--red)}
 
 .add-member-btn{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:1.5px dashed var(--bdr);background:transparent;color:var(--mut);font-size:14px;cursor:pointer;width:100%;transition:all .15s;font-family:inherit}
@@ -550,7 +551,9 @@ const FB_CFG={
 firebase.initializeApp(FB_CFG);
 const db=firebase.database();
 const SESSION=Math.random().toString(36).slice(2);
+let deviceId=localStorage.getItem('sl3_deviceId')||(()=>{const id=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('sl3_deviceId',id);return id;})();
 let houseId=localStorage.getItem('sl3_houseId')||null;
+function isAdmin(){return !house.adminId||house.adminId===deviceId;}
 let _fbRef=null, _saving=false;
 
 /* ── state ───────────────────────────── */
@@ -674,6 +677,21 @@ function openSetup(mode){
   }
 
   renderMemberList();
+  // admin-only controls
+  const admin=isAdmin();
+  document.getElementById('houseName').disabled=!admin;
+  document.getElementById('addMemberBtn').style.display=admin?'':'none';
+  // non-admin notice
+  let notice=document.getElementById('adminNotice');
+  if(!admin){
+    if(!notice){
+      notice=document.createElement('p');
+      notice.id='adminNotice';
+      notice.style.cssText='text-align:center;font-size:13px;color:var(--mut);padding:4px 0';
+      notice.textContent='רק יוצר הבית יכול לערוך הגדרות';
+      document.getElementById('setupScroll').insertBefore(notice,document.getElementById('setupScroll').firstChild);
+    }
+  } else if(notice){notice.remove();}
   updateShareBtnVisibility();
 
   if(mode==='setup'){
@@ -702,22 +720,30 @@ function renderMemberList(){
     av.title='שינוי צבע';
     av.addEventListener('click',()=>openColorPicker(m.id,av));
 
+    const wrap=document.createElement('div');
+    wrap.className='mem-inp-wrap';
+
     const inp=document.createElement('input');
     inp.className='mem-name-inp';inp.type='text';
     inp.value=m.name;inp.placeholder='שם השותף';
+    inp.disabled=!isAdmin();
     inp.addEventListener('input',()=>{
       m.name=inp.value;
       av.textContent=initials(m.name||'?');
     });
+    wrap.appendChild(inp);
 
-    const del=document.createElement('button');
-    del.className='mem-del';del.textContent='✕';del.title='הסר';
-    del.addEventListener('click',()=>{
-      editMembers=editMembers.filter(x=>x.id!==m.id);
-      renderMemberList();
-    });
+    if(isAdmin()){
+      const del=document.createElement('button');
+      del.className='mem-del';del.textContent='✕';del.title='הסר';
+      del.addEventListener('click',()=>{
+        editMembers=editMembers.filter(x=>x.id!==m.id);
+        renderMemberList();
+      });
+      wrap.appendChild(del);
+    }
 
-    row.appendChild(av);row.appendChild(inp);row.appendChild(del);
+    row.appendChild(av);row.appendChild(wrap);
     list.appendChild(row);
   });
 }
@@ -754,8 +780,9 @@ document.getElementById('saveSetupBtn').addEventListener('click',function(){
   setTimeout(showInstallFlow,800);
 });
 
-// Settings mode: back arrow saves automatically
+// Settings mode: back arrow saves (admin only)
 document.getElementById('settingsBack').addEventListener('click',function(){
+  if(!isAdmin()){goHome();return;}
   if(!commitSettings())return;
   renderHome();
   goHome();
@@ -1326,7 +1353,7 @@ document.getElementById('createHouseBtn').addEventListener('click',function(){
   houseId=newId;
   localStorage.setItem('sl3_houseId',newId);
   // reset to defaults
-  house={name:'',members:[]};
+  house={name:'',members:[],adminId:deviceId};
   listTypes=DEFAULT_TYPES.map(x=>({...x}));
   items={};nextId=1;
   listTypes.forEach(lt=>{items[lt.id]=[];});
