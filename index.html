@@ -618,7 +618,7 @@ function startListener(id){
   });
   acLoadCustom();
 }
-function connectToHouse(id,cb){
+function connectToHouse(id,cb,errCb){
   db.ref('houses/'+id).once('value',snap=>{
     const d=snap.val();
     if(d)applyData(d);
@@ -626,6 +626,9 @@ function connectToHouse(id,cb){
     localStorage.setItem('sl3_houseId',id);
     startListener(id);
     if(cb)cb(!!d);
+  },err=>{
+    if(errCb)errCb(err);
+    else if(cb)cb(false);
   });
 }
 function uid(){return nextId++;}
@@ -1494,29 +1497,36 @@ document.getElementById('createHouseBtn').addEventListener('click',function(){
   openSetup('setup');
 });
 
-document.getElementById('joinHouseBtn').addEventListener('click',async function(){
+document.getElementById('joinHouseBtn').addEventListener('click',function(){
+  const btn=this;
   const code=document.getElementById('joinCodeInput').value.trim().toUpperCase().replace(/\s/g,'');
   const errEl=document.getElementById('joinError');
   errEl.textContent='';
   if(code.length<4){errEl.textContent='קוד לא תקין — לפחות 4 תווים';return;}
-  this.disabled=true;this.textContent='...';
-  try{
-    const snap=await db.ref('houses/'+code).once('value');
-    if(!snap.exists()){
+  btn.disabled=true;btn.textContent='...';
+  // Use connectToHouse directly (same as deeplink flow) — avoids a double-read
+  // and works correctly regardless of Firebase Rules configuration.
+  connectToHouse(code,function(found){
+    if(!found){
+      // House didn't exist — roll back any state connectToHouse set
+      houseId=null;
+      localStorage.removeItem('sl3_houseId');
+      if(_fbRef){_fbRef.off();_fbRef=null;}
       errEl.textContent='קוד הבית לא נמצא. בדקו שוב.';
-      this.disabled=false;this.textContent='הצטרפות';
+      btn.disabled=false;btn.textContent='הצטרפות';
       return;
     }
-    connectToHouse(code,()=>{
-      document.getElementById('onboardOverlay').style.display='none';
-      document.getElementById('home').classList.remove('hidden');
-      renderHome();
-      toast('ברוכים הבאים לבית "'+house.name+'" ✓');
-    });
-  }catch(e){
+    document.getElementById('onboardOverlay').style.display='none';
+    document.getElementById('home').classList.remove('hidden');
+    renderHome();
+    toast('ברוכים הבאים לבית "'+house.name+'" ✓');
+  },function(){
+    houseId=null;
+    localStorage.removeItem('sl3_houseId');
+    if(_fbRef){_fbRef.off();_fbRef=null;}
     errEl.textContent='שגיאת חיבור. בדקו אינטרנט ונסו שוב.';
-    this.disabled=false;this.textContent='הצטרפות';
-  }
+    btn.disabled=false;btn.textContent='הצטרפות';
+  });
 });
 </script>
 </body>
