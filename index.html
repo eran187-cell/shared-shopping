@@ -348,7 +348,6 @@ a,button,input,select{touch-action:manipulation}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
 </head>
 <body>
 
@@ -1043,52 +1042,56 @@ document.querySelector('.filters').addEventListener('click',function(e){
 });
 
 /* ══ AUTOCOMPLETE ════════════════════════════ */
-let _acProducts=[], _acCustom=[], _acFuse=null, _acIdx=-1;
+let _acProducts=[], _acCustom=[], _acIdx=-1;
 const _acInput=document.getElementById('qaInput');
 const _acDrop=document.getElementById('acDrop');
 
 async function acInit(){
   try{const r=await fetch('./products.json');_acProducts=await r.json();}catch(e){_acProducts=[];}
-  acRebuild();
 }
 
 function acLoadCustom(){
   if(!houseId)return;
   db.ref('houses/'+houseId+'/customProducts').on('value',snap=>{
     _acCustom=Object.values(snap.val()||{});
-    acRebuild();
   });
-}
-
-function acRebuild(){
-  const all=[..._acProducts,..._acCustom.filter(c=>!_acProducts.includes(c))];
-  _acFuse=new Fuse(all,{threshold:0.4,includeMatches:true,minMatchCharLength:1});
 }
 
 function acSearch(q){
-  if(!q||!_acFuse)return[];
-  return _acFuse.search(q,{limit:8});
+  if(!q)return[];
+  const qn=q.toLowerCase();
+  const all=[..._acProducts,..._acCustom.filter(c=>!_acProducts.includes(c))];
+  // Primary: product name starts with query
+  const primary=all.filter(p=>p.toLowerCase().startsWith(qn));
+  // Secondary: any word in the name starts with query (e.g. "ירו" → "שעועית ירוקה")
+  const secondary=all.filter(p=>!p.toLowerCase().startsWith(qn)&&
+    p.toLowerCase().split(/\s+/).some(w=>w.startsWith(qn)));
+  return [...primary,...secondary].slice(0,8);
 }
 
-function acHighlight(str,matches){
-  if(!matches||!matches[0]||!matches[0].indices.length)return esc(str);
-  const idx=matches[0].indices;
-  let out='',last=0;
-  idx.forEach(([s,e])=>{
-    out+=esc(str.slice(last,s))+'<em>'+esc(str.slice(s,e+1))+'</em>';
-    last=e+1;
-  });
-  return out+esc(str.slice(last));
+function acHighlight(product,q){
+  const qn=q.toLowerCase();
+  const pn=product.toLowerCase();
+  if(pn.startsWith(qn)){
+    return '<em>'+esc(product.slice(0,q.length))+'</em>'+esc(product.slice(q.length));
+  }
+  // word-boundary match — highlight within the matching word
+  return product.split(/(\s+)/).map(part=>{
+    if(/\s/.test(part))return part;
+    return part.toLowerCase().startsWith(qn)
+      ?'<em>'+esc(part.slice(0,q.length))+'</em>'+esc(part.slice(q.length))
+      :esc(part);
+  }).join('');
 }
 
 function acRender(q){
   _acDrop.innerHTML='';
   if(!q){_acDrop.classList.remove('open');return;}
   const results=acSearch(q);
-  const exactMatch=results.some(r=>r.item.toLowerCase()===q.toLowerCase());
+  const exactMatch=results.some(r=>r.toLowerCase()===q.toLowerCase());
   let html='';
   results.forEach((r,i)=>{
-    html+=`<div class="ac-item${i===_acIdx?' sel':''}" data-val="${esc(r.item)}">${acHighlight(r.item,r.matches)}</div>`;
+    html+=`<div class="ac-item${i===_acIdx?' sel':''}" data-val="${esc(r)}">${acHighlight(r,q)}</div>`;
   });
   if(q&&!exactMatch){
     const ni=results.length;
