@@ -202,6 +202,25 @@ a,button,input,select{touch-action:manipulation}
 }
 .qabar.visible{display:block}
 .qarow{display:flex;gap:8px}
+/* Autocomplete */
+.ac-wrap{flex:1;position:relative}
+.ac-drop{
+  position:absolute;bottom:calc(100% + 6px);right:0;left:0;
+  background:var(--sur);border:1.5px solid var(--bdr);
+  border-radius:12px;box-shadow:0 -4px 24px rgba(0,0,0,.15);
+  z-index:200;overflow:hidden;display:none;
+  max-height:260px;overflow-y:auto;
+}
+.ac-drop.open{display:block}
+.ac-item{
+  padding:11px 16px;cursor:pointer;font-size:15px;color:var(--txt);
+  transition:background .1s;border-bottom:1px solid var(--bdr);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.sel{background:var(--pril)}
+.ac-item em{font-style:normal;font-weight:700;color:var(--pri)}
+.ac-new-tag{font-size:12px;color:var(--mut);background:var(--bg);padding:2px 7px;border-radius:99px;flex-shrink:0;margin-right:8px}
 /* font-size ≥ 16px prevents iOS from zooming in on focus (cursor offset fix) */
 .qainput{
   flex:1;padding:12px 14px;border-radius:10px;
@@ -329,6 +348,7 @@ a,button,input,select{touch-action:manipulation}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
 </head>
 <body>
 
@@ -447,7 +467,10 @@ a,button,input,select{touch-action:manipulation}
 <!-- Quick-add bar -->
 <div class="qabar" id="qabar">
   <div class="qarow">
-    <input class="qainput" id="qaInput" type="text" placeholder="הוספת פריט…" autocomplete="off"/>
+    <div class="ac-wrap" id="acWrap">
+      <input class="qainput" id="qaInput" type="text" placeholder="הוספת פריט…" autocomplete="off" autocorrect="off" spellcheck="false"/>
+      <div class="ac-drop" id="acDrop"></div>
+    </div>
     <button class="qabtn" id="qaBtn">+</button>
   </div>
   <div class="qaopts">
@@ -594,6 +617,7 @@ function startListener(id){
     applyData(d);
     renderCurrent();
   });
+  acLoadCustom();
 }
 function connectToHouse(id,cb){
   db.ref('houses/'+id).once('value',snap=>{
@@ -945,6 +969,7 @@ function submitItem(){
   }
   updateProgress(activeList());
   input.value='';input.focus();
+  _acDrop.classList.remove('open');_acIdx=-1;
   selMember=null;renderAssigneeBtn();
   toast('"'+name+'" נוסף ✓');
 }
@@ -1017,9 +1042,119 @@ document.querySelector('.filters').addEventListener('click',function(e){
   renderListView();
 });
 
+/* ══ AUTOCOMPLETE ════════════════════════════ */
+let _acProducts=[], _acCustom=[], _acFuse=null, _acIdx=-1;
+const _acInput=document.getElementById('qaInput');
+const _acDrop=document.getElementById('acDrop');
+
+async function acInit(){
+  try{const r=await fetch('./products.json');_acProducts=await r.json();}catch(e){_acProducts=[];}
+  acRebuild();
+}
+
+function acLoadCustom(){
+  if(!houseId)return;
+  db.ref('houses/'+houseId+'/customProducts').on('value',snap=>{
+    _acCustom=Object.values(snap.val()||{});
+    acRebuild();
+  });
+}
+
+function acRebuild(){
+  const all=[..._acProducts,..._acCustom.filter(c=>!_acProducts.includes(c))];
+  _acFuse=new Fuse(all,{threshold:0.4,includeMatches:true,minMatchCharLength:1});
+}
+
+function acSearch(q){
+  if(!q||!_acFuse)return[];
+  return _acFuse.search(q,{limit:8});
+}
+
+function acHighlight(str,matches){
+  if(!matches||!matches[0]||!matches[0].indices.length)return esc(str);
+  const idx=matches[0].indices;
+  let out='',last=0;
+  idx.forEach(([s,e])=>{
+    out+=esc(str.slice(last,s))+'<em>'+esc(str.slice(s,e+1))+'</em>';
+    last=e+1;
+  });
+  return out+esc(str.slice(last));
+}
+
+function acRender(q){
+  _acDrop.innerHTML='';
+  if(!q){_acDrop.classList.remove('open');return;}
+  const results=acSearch(q);
+  const exactMatch=results.some(r=>r.item.toLowerCase()===q.toLowerCase());
+  let html='';
+  results.forEach((r,i)=>{
+    html+=`<div class="ac-item${i===_acIdx?' sel':''}" data-val="${esc(r.item)}">${acHighlight(r.item,r.matches)}</div>`;
+  });
+  if(q&&!exactMatch){
+    const ni=results.length;
+    html+=`<div class="ac-item${ni===_acIdx?' sel':''} ac-new-item" data-val="${esc(q)}" data-new="1">${esc(q)}<span class="ac-new-tag">הוסף חדש</span></div>`;
+  }
+  if(!html){_acDrop.classList.remove('open');return;}
+  _acDrop.innerHTML=html;
+  _acDrop.classList.add('open');
+}
+
+function acSelect(el){
+  const val=el.dataset.val;
+  _acInput.value=val;
+  _acDrop.classList.remove('open');
+  _acIdx=-1;
+  if(el.dataset.new==='1'&&val&&houseId){
+    db.ref('houses/'+houseId+'/customProducts').push(val);
+  }
+}
+
+_acInput.addEventListener('input',function(){
+  _acIdx=-1;
+  acRender(this.value.trim());
+});
+
+_acInput.addEventListener('keydown',function(e){
+  const items=_acDrop.querySelectorAll('.ac-item');
+  if(!_acDrop.classList.contains('open')||!items.length){
+    if(e.key==='Enter')submitItem();
+    return;
+  }
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    _acIdx=Math.min(_acIdx+1,items.length-1);
+    acRender(this.value.trim());
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    _acIdx=Math.max(_acIdx-1,-1);
+    acRender(this.value.trim());
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    if(_acIdx>=0&&items[_acIdx]){acSelect(items[_acIdx]);submitItem();}
+    else{_acDrop.classList.remove('open');submitItem();}
+  } else if(e.key==='Escape'){
+    _acDrop.classList.remove('open');_acIdx=-1;
+  }
+});
+
+_acDrop.addEventListener('mousedown',function(e){e.preventDefault();});
+_acDrop.addEventListener('click',function(e){
+  const item=e.target.closest('.ac-item');
+  if(item){acSelect(item);_acInput.focus();}
+});
+_acDrop.addEventListener('touchend',function(e){
+  const item=e.target.closest('.ac-item');
+  if(item){e.preventDefault();acSelect(item);_acInput.focus();}
+});
+
+document.addEventListener('click',function(e){
+  if(!document.getElementById('acWrap').contains(e.target))
+    _acDrop.classList.remove('open');
+});
+
 /* ── Quick-add events ────────────────── */
-document.getElementById('qaBtn').addEventListener('click',submitItem);
-document.getElementById('qaInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitItem();});
+document.getElementById('qaBtn').addEventListener('click',()=>{_acDrop.classList.remove('open');submitItem();});
+document.getElementById('qaInput').addEventListener('keydown',()=>{});
 /* ── Assignee picker ─────────────────── */
 const assigneeBtn=document.getElementById('assigneeBtn');
 const assigneeDrop=document.getElementById('assigneeDrop');
@@ -1293,6 +1428,7 @@ document.getElementById('darkToggle').addEventListener('click', function(){
 buildColorPicker();
 applyTheme(localStorage.getItem('sl3_dark') === '1');
 _refreshInstallBtns();
+acInit();
 
 // default: init types so DEFAULT_TYPES exist before any render
 listTypes=DEFAULT_TYPES.map(x=>({...x}));
