@@ -277,7 +277,8 @@ a,button,input,select{touch-action:manipulation}
   flex-shrink:0;display:flex;align-items:center;justify-content:center;
   transition:background .1s;line-height:1;padding:0;
 }
-.qa-qty-btn:active{background:var(--pril)}
+.qa-qty-btn:active:not(:disabled){background:var(--pril)}
+.qa-qty-btn:disabled{opacity:.28;cursor:default;pointer-events:none}
 .qa-qty-num{
   padding:0 8px;font-size:17px;font-weight:700;color:var(--txt);
   flex-shrink:0;min-width:32px;text-align:center;cursor:default;
@@ -592,7 +593,6 @@ a,button,input,select{touch-action:manipulation}
         <button class="qa-unit" data-unit="גרם">גרם</button>
         <button class="qa-unit" data-unit="ליטר">ליטר</button>
         <button class="qa-unit" data-unit="מ&quot;ל">מ"ל</button>
-        <button class="qa-unit" data-unit="אריזה">אריזה</button>
       </div>
     </div>
     <div class="qa-section">
@@ -1237,10 +1237,16 @@ let _qaQty=1, _qaUnit="יח'";
 function _setQaQty(v){
   _qaQty=Math.max(1,v);
   document.getElementById('qaQtyNum').textContent=_qaQty;
+  // disable minus when qty = 1
+  const minusBtn=document.getElementById('qaQtyMinus');
+  if(minusBtn){
+    minusBtn.disabled=_qaQty<=1;
+    minusBtn.style.opacity=_qaQty<=1?'0.3':'1';
+    minusBtn.style.cursor=_qaQty<=1?'default':'pointer';
+  }
 }
 function _resetQaMore(){
-  _qaQty=1;
-  document.getElementById('qaQtyNum').textContent='1';
+  _setQaQty(1); // also updates disabled state on minus
   _qaUnit="יח'";
   document.querySelectorAll('.qa-unit').forEach(b=>b.classList.toggle('active',b.dataset.unit==="יח'"));
   selMember=null;renderQaMembers();
@@ -1461,13 +1467,20 @@ document.getElementById('qaBtn').addEventListener('click',()=>{
 });
 document.getElementById('qaInput').addEventListener('keydown',()=>{});
 
-/* ── Three-dots toggle ─────────────── */
+/* ── Three-dots: open panel / close panel on second press ── */
 document.getElementById('qaDots').addEventListener('click',function(){
   const more=document.getElementById('qaMore');
   const isOpen=more.classList.contains('open');
-  more.classList.toggle('open',!isOpen);
-  this.classList.toggle('active',!isOpen);
-  if(!isOpen)renderQaMembers();
+  if(isOpen){
+    // second press — just close
+    more.classList.remove('open');
+    this.classList.remove('active');
+  } else {
+    // first press — open and render members
+    more.classList.add('open');
+    this.classList.add('active');
+    renderQaMembers();
+  }
 });
 
 /* ── Collapse qabar (via ⋮ long-press or back gesture; element may not exist) */
@@ -1494,7 +1507,8 @@ document.getElementById('qaUnitsRow').addEventListener('click',function(e){
 function renderQaMembers(){
   const row=document.getElementById('qaMembersRow');
   if(!row)return;
-  let html='<button class="qa-none-btn'+(selMember===null?' selected':'')+'" data-mid="">✕</button>';
+  // No X/none button — clicking the selected member again deselects
+  let html='';
   house.members.forEach(m=>{
     html+='<button class="qa-member-av'+(selMember===m.id?' selected':'')+'" data-mid="'+m.id+'" title="'+esc(m.name)+'">'
       +'<div class="qa-av-circle" style="background:'+m.color+'">'+initials(m.name)+'</div>'
