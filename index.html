@@ -194,6 +194,10 @@ a,button,input,select{touch-action:manipulation}
 .item-card.checked .iname{text-decoration:line-through;color:var(--mut)}
 .item-card.out{opacity:0;transform:translateX(28px);max-height:0;margin-bottom:0;padding-top:0;padding-bottom:0;border-width:0}
 @keyframes cardIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.item-card.item-new{animation:cardIn .28s cubic-bezier(.34,1.56,.64,1) both,itemFlash .7s .28s ease both}
+@keyframes itemFlash{0%{border-color:var(--pri);box-shadow:0 0 0 3px rgba(45,186,122,.35)}100%{border-color:var(--bdr);box-shadow:none}}
+@keyframes submitPop{0%{transform:scale(1)}40%{transform:scale(.88);background:#25a067}70%{transform:scale(1.12);background:#2dba7a}100%{transform:scale(1);background:var(--pri)}}
+.qa-submit.pop{animation:submitPop .38s ease both}
 
 .chk{width:26px;height:26px;border-radius:8px;border:2px solid var(--bdr);background:transparent;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .chk.on{background:var(--pri);border-color:var(--pri)}
@@ -1273,10 +1277,20 @@ function submitItem(){
   items[activeId].unshift(item);save();
 
   renderListView();
+  // highlight the newly added card (first in list) and scroll to it
+  const wrap=document.getElementById('itemsWrap');
+  if(wrap){
+    const first=wrap.querySelector('.item-card');
+    if(first){first.classList.add('item-new');setTimeout(()=>first.classList.remove('item-new'),1100);}
+    wrap.scrollTop=0;
+  }
+  // pop animation on ✓ button as immediate feedback
+  const qab=document.getElementById('qaBtn');
+  if(qab){qab.classList.add('pop');setTimeout(()=>qab.classList.remove('pop'),400);}
+
   input.value='';input.focus();
   _acDrop.classList.remove('open');
   _resetQaMore();
-  toast('"'+name+'" נוסף ✓');
 }
 
 /* ── Change qty ──────────────────────── */
