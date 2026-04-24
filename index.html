@@ -1272,16 +1272,7 @@ function submitItem(){
   if(!items[activeId])items[activeId]=[];
   items[activeId].unshift(item);save();
 
-  const wrap=document.getElementById('itemsWrap');
-  if(wrap){
-    const empty=wrap.querySelector('.empty-list');
-    if(empty)wrap.innerHTML='';
-    if(activeFilter==='all'||activeFilter==='pending'){
-      const card=buildCard(item);
-      wrap.insertBefore(card,wrap.firstChild);
-    }
-  }
-  updateProgress(activeList());
+  renderListView();
   input.value='';input.focus();
   _acDrop.classList.remove('open');
   _resetQaMore();
@@ -1459,13 +1450,11 @@ document.addEventListener('click',e=>{
   btn.addEventListener('touchend',function(e){
     e.preventDefault();
     _tapped=true;
-    toast('🟢 tap: "'+_acInput.value+'"');
     doSubmit();
     setTimeout(()=>{_tapped=false;},500);
   });
   btn.addEventListener('click',function(){
     if(_tapped)return;
-    toast('🟢 click: "'+_acInput.value+'"');
     doSubmit();
   });
 })();
