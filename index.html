@@ -4,25 +4,26 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>Shared Shopping</title>
 <link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon.svg"/>
 <meta name="apple-mobile-web-app-title" content="Shared Shopping"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#2dba7a"/>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f4f5fb;--sur:#fff;--bdr:#e6e8f0;
-  --pri:#5b4fcf;--pril:#ece9fc;
-  --txt:#1a1d2e;--mut:#8a8fa8;
+  --bg:#f0faf5;--sur:#fff;--bdr:#d4ede1;
+  --pri:#2dba7a;--pril:#e4f7ed;
+  --txt:#1a2e24;--mut:#7aa090;
   --red:#e74c3c;--r:14px;
   --sab:env(safe-area-inset-bottom, 0px);
 }
 /* dark mode — overrides only colour tokens */
 body.dark{
-  --bg:#0f1117;--sur:#1c1f2b;--bdr:#2a2d3e;
-  --pril:#1e1a3a;--txt:#e8eaf6;--mut:#5c6080;
+  --bg:#0d1a11;--sur:#152019;--bdr:#1f3329;
+  --pril:#0d2419;--txt:#d4f0e0;--mut:#4a8060;
 }
 body{
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
@@ -94,7 +95,7 @@ a,button,input,select{touch-action:manipulation}
 .cp-dot.sel{border-color:var(--txt)}
 
 .btn-primary{width:100%;padding:14px;border-radius:12px;background:var(--pri);color:#fff;border:none;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;transition:background .15s;font-family:inherit}
-.btn-primary:hover{background:#4a3fbe}
+.btn-primary:hover{background:#25a067}
 .btn-secondary{width:100%;padding:12px;border-radius:12px;background:var(--bg);color:var(--txt);border:1.5px solid var(--bdr);font-size:15px;cursor:pointer;margin-top:8px;transition:all .15s;font-family:inherit}
 .btn-secondary:hover{border-color:var(--pri);color:var(--pri)}
 
@@ -117,7 +118,7 @@ a,button,input,select{touch-action:manipulation}
 
 .lt-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
 .lt-card{background:var(--sur);border-radius:16px;border:1.5px solid var(--bdr);padding:16px;cursor:pointer;transition:all .18s;animation:fadeUp .25s ease both;user-select:none}
-.lt-card:hover{border-color:var(--pri);box-shadow:0 4px 18px rgba(91,79,207,.13);transform:translateY(-2px)}
+.lt-card:hover{border-color:var(--pri);box-shadow:0 4px 18px rgba(45,186,122,.15);transform:translateY(-2px)}
 .lt-card:active{transform:scale(.97)}
 .lt-emoji{font-size:28px;margin-bottom:10px}
 .lt-name{font-size:15px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -298,7 +299,7 @@ a,button,input,select{touch-action:manipulation}
 .btn-cancel{flex:1;padding:13px;border-radius:10px;background:var(--bg);color:var(--txt);border:none;font-size:15px;cursor:pointer}
 
 /* Share / Join */
-.join-banner{background:linear-gradient(135deg,#5b4fcf,#8b5cf6);color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:16px;display:none}
+.join-banner{background:linear-gradient(135deg,#2dba7a,#17afa0);color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:16px;display:none}
 .join-banner.show{display:block}
 .join-banner h4{font-size:15px;font-weight:700;margin-bottom:4px}
 .join-banner p{font-size:13px;opacity:.85;margin-bottom:12px}
@@ -345,11 +346,35 @@ a,button,input,select{touch-action:manipulation}
 /* Toast */
 .toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%) translateY(8px);background:#1a1d2e;color:#fff;padding:9px 18px;border-radius:99px;font-size:13px;font-weight:500;z-index:99;opacity:0;transition:all .22s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ── Splash screen ─────────────────────────── */
+#splash{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+  background:linear-gradient(145deg,#5dd678 0%,#2dba7a 45%,#17afa0 100%);
+  transition:opacity .5s ease,visibility .5s ease;
+}
+#splash.hide{opacity:0;visibility:hidden}
+#splash img{width:120px;height:120px;border-radius:26px;box-shadow:0 12px 40px rgba(0,0,0,.22)}
+#splash .sp-name{color:#fff;font-size:26px;font-weight:800;letter-spacing:.5px;text-shadow:0 2px 8px rgba(0,0,0,.18)}
+#splash .sp-sub{color:rgba(255,255,255,.75);font-size:15px;font-weight:400;direction:rtl}
+#splash .sp-dots{display:flex;gap:8px;margin-top:6px}
+#splash .sp-dots span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.5);animation:dotPulse 1.2s ease-in-out infinite}
+#splash .sp-dots span:nth-child(2){animation-delay:.2s}
+#splash .sp-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dotPulse{0%,80%,100%{transform:scale(1);opacity:.5}40%{transform:scale(1.3);opacity:1}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
+
+<!-- ══ SPLASH SCREEN ═══════════════════════════════ -->
+<div id="splash">
+  <img src="icon.svg" alt="Shared Shopping"/>
+  <div class="sp-name">Shared Shopping</div>
+  <div class="sp-sub">רשימת קניות משותפת</div>
+  <div class="sp-dots"><span></span><span></span><span></span></div>
+</div>
 
 <!-- ══ SETUP / SETTINGS VIEW ═══════════════════════ -->
 <div class="view slide-right" id="setup">
@@ -1424,6 +1449,16 @@ document.getElementById('darkToggle').addEventListener('click', function(){
   applyTheme(isDark);
 });
 
+/* ══ SPLASH ══════════════════════════════════ */
+const _splashEl=document.getElementById('splash');
+function hideSplash(){
+  if(!_splashEl||_splashEl.classList.contains('hide'))return;
+  _splashEl.classList.add('hide');
+  setTimeout(()=>{if(_splashEl)_splashEl.remove();},550);
+}
+// Maximum splash time — always hide after 3 s even if Firebase is slow
+setTimeout(hideSplash,3000);
+
 /* ══ BOOT ════════════════════════════════════ */
 buildColorPicker();
 applyTheme(localStorage.getItem('sl3_dark') === '1');
@@ -1445,6 +1480,7 @@ if(_deeplink && _deeplink!==houseId){
   document.getElementById('onboardOverlay').style.display='none';
   // load house name from Firebase then show confirm
   db.ref('houses/'+_deeplink+'/house/name').once('value',snap=>{
+    hideSplash();
     const name=snap.val()||_deeplink;
     document.getElementById('joinOverlayTitle').textContent='הוזמנת לבית "'+name+'"';
     document.getElementById('joinOverlayMsg').textContent='לחיצה על הצטרפות תחבר אותך לרשימות המשפחה המשותפות.';
@@ -1472,11 +1508,13 @@ if(_deeplink && _deeplink!==houseId){
   document.getElementById('setup').classList.add('slide-right');
   document.getElementById('onboardOverlay').style.display='none';
   connectToHouse(houseId,()=>{
+    hideSplash();
     document.getElementById('home').classList.remove('hidden');
     renderHome();
   });
 } else {
   // no house yet — show onboarding
+  hideSplash();
   document.getElementById('onboardOverlay').style.display='flex';
   document.getElementById('home').classList.add('hidden');
   document.getElementById('setup').classList.add('slide-right');
