@@ -717,8 +717,16 @@ let listTypes=[], items={}, nextId=1, selMember=null, activeId=null, activeFilte
 let colorTargetMemberId=null;
 
 /* ── storage ─────────────────────────── */
+let _receivedRemote=false; // true once we've received at least one snapshot
 function save(){
   if(!houseId)return;
+  // Safety: don't overwrite Firebase with empty state before we've loaded it
+  const totalItems=Object.values(items||{}).reduce((n,a)=>n+(a?.length||0),0);
+  const isEmptyState=!house.name && (!house.members||!house.members.length) && totalItems===0;
+  if(isEmptyState && !_receivedRemote){
+    console.warn('[save] blocked: empty state before remote received');
+    return;
+  }
   _saving=true;
   const payload={house,types:listTypes,items,nextId,_s:SESSION,_t:Date.now()};
   db.ref('houses/'+houseId).set(payload)
@@ -745,6 +753,7 @@ function startListener(id){
   _fbRef.on('value',snap=>{
     const d=snap.val();
     if(!d)return;
+    _receivedRemote=true;
     // ignore only our own echo; still accept updates from other sessions
     // (even while we are in the middle of saving) so sync isn't blocked
     if(d._s===SESSION)return;
@@ -756,7 +765,7 @@ function startListener(id){
 function connectToHouse(id,cb,errCb){
   db.ref('houses/'+id).once('value',snap=>{
     const d=snap.val();
-    if(d)applyData(d);
+    if(d){applyData(d);_receivedRemote=true;}
     houseId=id;
     localStorage.setItem('sl3_houseId',id);
     startListener(id);
@@ -1281,13 +1290,24 @@ function _resetQaMore(){
 
 /* ── Add (real-time) ─────────────────── */
 let _submitLock=false;
+let _lastAdd={fp:'',t:0};
 function submitItem(){
   if(_submitLock)return;
   const input=document.getElementById('qaInput');
   const name=input.value.trim();
   if(!name){input.focus();return;}
+  // fingerprint dedup: same name+qty+unit+list within 1500ms → ignore
+  const fp=activeId+'|'+name+'|'+_qaQty+'|'+_qaUnit;
+  const now=Date.now();
+  if(_lastAdd.fp===fp && (now-_lastAdd.t)<1500){
+    console.warn('[submitItem] deduped:',fp);
+    input.value='';
+    _acDrop.classList.remove('open');
+    return;
+  }
+  _lastAdd={fp,t:now};
   _submitLock=true;
-  setTimeout(()=>{_submitLock=false;},600);
+  setTimeout(()=>{_submitLock=false;},800);
   const noteVal=document.getElementById('qaNoteInp').value.trim();
   const item={
     id:uid(),name,
@@ -1301,13 +1321,17 @@ function submitItem(){
   items[activeId].unshift(item);save();
 
   renderListView();
-  // scroll to top so new item (inserted at front) is visible
+  // scroll to top so new item (inserted at front) is visible + force reflow for animation
   const wrap=document.getElementById('itemsWrap');
   if(wrap){
-    const first=wrap.querySelector('.item-card');
-    if(first)first.classList.add('item-new');
     wrap.scrollTop=0;
-    setTimeout(()=>{if(first)first.classList.remove('item-new');},1100);
+    requestAnimationFrame(()=>{
+      const first=wrap.querySelector('.item-card');
+      if(first){
+        first.classList.add('item-new');
+        setTimeout(()=>first.classList.remove('item-new'),1200);
+      }
+    });
   }
   // ✓ button pop feedback
   const qab=document.getElementById('qaBtn');
