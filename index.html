@@ -203,6 +203,7 @@ a,button,input,select{touch-action:manipulation}
 .imeta{font-size:12px;color:var(--mut);margin-top:3px;display:flex;gap:6px;align-items:center}
 .qty-badge{background:var(--bg);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600;color:var(--txt)}
 .who-badge{padding:1px 8px;border-radius:6px;font-size:11px;font-weight:600;color:#fff}
+.item-note{font-size:12px;color:var(--mut);margin-top:3px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .adot{width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .item-ctrl{display:flex;align-items:center;flex-shrink:0;gap:6px}
 .ctrl-stepper{display:flex;border:1.5px solid var(--bdr);border-radius:8px;overflow:hidden;background:var(--bg)}
@@ -227,7 +228,6 @@ a,button,input,select{touch-action:manipulation}
   z-index:30;box-shadow:0 -4px 20px rgba(0,0,0,.07);display:none;
 }
 .qabar.visible{display:block}
-.qarow{display:flex;gap:8px}
 /* Autocomplete */
 .ac-wrap{flex:1;position:relative}
 .ac-drop{
@@ -247,66 +247,113 @@ a,button,input,select{touch-action:manipulation}
 .ac-item:hover,.ac-item.sel{background:var(--pril)}
 .ac-item em{font-style:normal;font-weight:700;color:var(--pri)}
 .ac-new-tag{font-size:12px;color:var(--mut);background:var(--bg);padding:2px 7px;border-radius:99px;flex-shrink:0;margin-right:8px}
-/* font-size ≥ 16px prevents iOS from zooming in on focus (cursor offset fix) */
-.qainput{
-  flex:1;padding:12px 14px;border-radius:10px;
-  border:1.5px solid var(--bdr);background:var(--bg);
-  font-size:16px;color:var(--txt);outline:none;
-  transition:border .15s;font-family:inherit;
-  -webkit-appearance:none;
+/* ── Quick-add bar (redesigned) ───────── */
+/* Main row */
+.qa-row{display:flex;align-items:center;gap:8px}
+/* Input + qty display box */
+.qa-inp-box{
+  flex:1;display:flex;align-items:center;
+  background:var(--bg);border:1.5px solid var(--bdr);border-radius:12px;
+  overflow:visible;position:relative;transition:border-color .15s;
 }
-.qainput:focus{border-color:var(--pri);background:var(--sur);color:var(--txt)}
-.qainput::placeholder{color:var(--mut)}
-.qabtn{
-  width:50px;height:50px;border-radius:10px;
-  background:var(--pri);border:none;color:#fff;font-size:26px;
+.qa-inp-box:focus-within{border-color:var(--pri);background:var(--sur)}
+/* font-size ≥ 16px prevents iOS zoom on focus */
+.qa-inp{
+  flex:1;padding:13px 14px 13px 6px;border:none;outline:none;
+  background:transparent;font-size:16px;color:var(--txt);
+  font-family:inherit;text-align:right;direction:rtl;
+  -webkit-appearance:none;min-width:0;
+}
+.qa-inp::placeholder{color:var(--mut)}
+.qa-sep{width:1px;height:26px;background:var(--bdr);flex-shrink:0}
+.qa-qty-num{
+  padding:0 12px;font-size:18px;font-weight:700;color:var(--txt);
+  flex-shrink:0;min-width:40px;text-align:center;cursor:default;
+}
+/* Large circle qty buttons (match image) */
+.qa-circ{
+  width:46px;height:46px;border-radius:50%;
+  background:var(--bg);border:1.5px solid var(--bdr);
+  color:var(--txt);font-size:24px;font-weight:300;cursor:pointer;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:background .12s,transform .1s;line-height:1;
+}
+.qa-circ:active{transform:scale(.9);background:var(--bdr)}
+/* Collapse chevron */
+.qa-collapse{
+  width:36px;height:46px;border-radius:10px;border:none;
+  background:transparent;color:var(--mut);font-size:15px;
   cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  transition:background .15s;
+  transition:background .12s;
 }
-.qabtn:active{background:#4a3fbe}
-.qaopts{display:flex;gap:8px;margin-top:8px;align-items:center}
-.qasel{
-  flex:1;padding:8px 10px;border-radius:8px;
+.qa-collapse:hover{background:var(--bg);color:var(--txt)}
+/* Three-dots button */
+.qa-dots{
+  width:40px;height:46px;border-radius:10px;
+  border:1.5px solid var(--bdr);background:transparent;
+  color:var(--mut);font-size:20px;font-weight:700;
+  cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:all .12s;letter-spacing:1px;
+}
+.qa-dots:hover,.qa-dots.active{color:var(--pri);border-color:var(--pri);background:var(--pril)}
+/* Submit button (checkmark) */
+.qa-submit{
+  width:46px;height:46px;border-radius:12px;
+  background:var(--pri);border:none;color:#fff;
+  font-size:18px;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,transform .1s;
+}
+.qa-submit:active{background:#25a067;transform:scale(.95)}
+/* More panel */
+.qa-more{
+  display:none;margin-top:12px;padding-top:12px;
+  border-top:1px solid var(--bdr);animation:fadeUp .18s ease both;
+}
+.qa-more.open{display:block}
+.qa-section{margin-bottom:12px}
+.qa-section:last-child{margin-bottom:0}
+.qa-section-label{font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--mut);margin-bottom:8px}
+/* Unit chips */
+.qa-units-row{display:flex;gap:6px;flex-wrap:wrap}
+.qa-unit{
+  padding:6px 14px;border-radius:99px;border:1.5px solid var(--bdr);
+  background:var(--bg);color:var(--txt);font-size:13px;font-weight:600;
+  cursor:pointer;font-family:inherit;transition:all .12s;white-space:nowrap;
+}
+.qa-unit.active{background:var(--pri);color:#fff;border-color:var(--pri)}
+/* Members row */
+.qa-members-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.qa-member-av{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:none;border:none;cursor:pointer;padding:0;font-family:inherit;
+}
+.qa-av-circle{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#fff;
+  border:2.5px solid transparent;transition:all .12s;opacity:.65;
+}
+.qa-member-av.selected .qa-av-circle{border-color:var(--txt);opacity:1;transform:scale(1.1)}
+.qa-av-name{font-size:10px;color:var(--mut);max-width:48px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qa-none-btn{
+  width:36px;height:36px;border-radius:50%;border:1.5px dashed var(--bdr);
+  background:var(--bg);color:var(--mut);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  transition:all .12s;flex-shrink:0;
+}
+.qa-none-btn.selected{border-color:var(--pri);color:var(--pri);background:var(--pril)}
+/* Note input */
+.qa-note-inp{
+  width:100%;padding:10px 12px;border-radius:10px;
   border:1.5px solid var(--bdr);background:var(--bg);
-  font-size:16px;color:var(--txt);outline:none;font-family:inherit;cursor:pointer;
-  -webkit-appearance:none;
+  font-size:15px;color:var(--txt);outline:none;font-family:inherit;
+  -webkit-appearance:none;transition:border .15s;
 }
-.qasel:focus{border-color:var(--pri)}
-.qaqty{max-width:72px;text-align:center}
-/* Assignee picker button */
-.assignee-wrap{position:relative;flex-shrink:0}
-.assignee-btn{
-  width:36px;height:36px;border-radius:50%;border:1.5px solid var(--bdr);
-  background:var(--bg);cursor:pointer;display:flex;align-items:center;
-  justify-content:center;transition:all .15s;color:var(--txt);opacity:.6;
-  font-size:12px;font-weight:700;flex-shrink:0;padding:0;
-}
-.assignee-btn:hover{border-color:var(--pri);opacity:1;color:var(--pri)}
-.assignee-btn.has-member{border-color:transparent;color:#fff;opacity:1}
-.assignee-drop{
-  display:none;position:absolute;bottom:calc(100% + 8px);right:0;
-  background:var(--sur);border:1.5px solid var(--bdr);border-radius:12px;
-  box-shadow:0 4px 20px rgba(0,0,0,.15);padding:8px;
-  flex-direction:column;gap:6px;z-index:200;min-width:160px;
-}
-.assignee-drop.open{display:flex}
-.adrop-item{
-  display:flex;align-items:center;gap:10px;padding:7px 10px;
-  border-radius:8px;cursor:pointer;transition:background .12s;
-  font-size:14px;color:var(--txt);background:transparent;border:none;
-  font-family:inherit;text-align:right;width:100%;
-}
-.adrop-item:hover{background:var(--bg)}
-.adrop-item.on{background:var(--pril);color:var(--pri);font-weight:600}
-.adrop-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
-.adrop-none{color:var(--mut);font-style:italic}
-
-/* Qty +/- control */
-.qty-ctrl{display:flex;align-items:center;border:1.5px solid var(--bdr);border-radius:8px;background:var(--bg);overflow:hidden;flex-shrink:0}
-.qty-ctrl:focus-within{border-color:var(--pri)}
-.qty-btn{width:30px;height:42px;border:none;background:transparent;color:var(--pri);font-size:20px;font-weight:700;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .1s;line-height:1}
-.qty-btn:active{background:var(--pril)}
-.qaqty-inp{width:38px;text-align:center;border:none;border-left:1px solid var(--bdr);border-right:1px solid var(--bdr);background:transparent;font-size:15px;color:var(--txt);outline:none;font-family:inherit;padding:8px 2px;-webkit-appearance:none}
+.qa-note-inp:focus{border-color:var(--pri);background:var(--sur)}
+.qa-note-inp::placeholder{color:var(--mut)}
 
 /* Edit-title pencil icon */
 .edit-title-btn{width:36px;height:36px;border:none;background:transparent;color:var(--txt);font-size:18px;cursor:pointer;flex-shrink:0;opacity:.55;border-radius:10px;transition:background .15s,opacity .15s,color .15s;display:flex;align-items:center;justify-content:center;padding:0}
@@ -518,29 +565,51 @@ a,button,input,select{touch-action:manipulation}
 
 <!-- Quick-add bar -->
 <div class="qabar" id="qabar">
-  <div class="qarow">
-    <div class="ac-wrap" id="acWrap">
-      <input class="qainput" id="qaInput" type="text" placeholder="הוספת פריט…" autocomplete="off" autocorrect="off" spellcheck="false"/>
+  <!-- Main row -->
+  <div class="qa-row">
+    <!-- Submit -->
+    <button class="qa-submit" id="qaBtn" title="הוסף פריט">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </button>
+    <!-- Item name + qty -->
+    <div class="qa-inp-box" id="acWrap">
+      <input class="qa-inp" id="qaInput" type="text" placeholder="הוספת פריט…"
+             autocomplete="off" autocorrect="off" spellcheck="false"/>
+      <div class="qa-sep"></div>
+      <div class="qa-qty-num" id="qaQtyNum">1</div>
       <div class="ac-drop" id="acDrop"></div>
     </div>
-    <button class="qabtn" id="qaBtn">+</button>
+    <!-- Three dots -->
+    <button class="qa-dots" id="qaDots" title="אפשרויות נוספות">⋮</button>
+    <!-- Qty + circle -->
+    <button class="qa-circ" id="qaQtyPlus" aria-label="הגדל כמות">+</button>
+    <!-- Qty − circle -->
+    <button class="qa-circ" id="qaQtyMinus" aria-label="הפחת כמות">−</button>
+    <!-- Collapse -->
+    <button class="qa-collapse" id="qaCollapse" aria-label="כווץ">∨</button>
   </div>
-  <div class="qaopts">
-    <div class="qty-ctrl">
-      <button class="qty-btn" id="qaQtyMinus">−</button>
-      <input class="qaqty-inp" id="qaQty" type="text" inputmode="numeric" pattern="[0-9]*" value="1"/>
-      <button class="qty-btn" id="qaQtyPlus">+</button>
+
+  <!-- More options panel (hidden by default) -->
+  <div class="qa-more" id="qaMore">
+    <div class="qa-section">
+      <div class="qa-section-label">יחידה</div>
+      <div class="qa-units-row" id="qaUnitsRow">
+        <button class="qa-unit active" data-unit="יח'">יח'</button>
+        <button class="qa-unit" data-unit="ק&quot;ג">ק"ג</button>
+        <button class="qa-unit" data-unit="גרם">גרם</button>
+        <button class="qa-unit" data-unit="ליטר">ליטר</button>
+        <button class="qa-unit" data-unit="מ&quot;ל">מ"ל</button>
+        <button class="qa-unit" data-unit="אריזה">אריזה</button>
+      </div>
     </div>
-    <select class="qasel" id="qaUnit">
-      <option>יח'</option><option>ק"ג</option><option>גרם</option>
-      <option>ליטר</option><option>מ"ל</option><option>אריזה</option>
-      <option>קופסה</option><option>שקית</option>
-    </select>
-    <div class="assignee-wrap" id="assigneeWrap">
-      <button class="assignee-btn" id="assigneeBtn" title="שיוך למשתתף">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      </button>
-      <div class="assignee-drop" id="assigneeDrop"></div>
+    <div class="qa-section">
+      <div class="qa-section-label">מי מזמין</div>
+      <div class="qa-members-row" id="qaMembersRow"></div>
+    </div>
+    <div class="qa-section">
+      <div class="qa-section-label">הערה</div>
+      <input class="qa-note-inp" id="qaNoteInp" type="text"
+             placeholder="הערה אופציונלית…" autocomplete="off" autocorrect="off"/>
     </div>
   </div>
 </div>
@@ -1152,8 +1221,10 @@ function buildCard(item){
   const info=document.createElement('div');
   info.className='iinfo';
   const whoHtml=m?'<span class="who-badge" style="background:'+m.color+'">'+esc(m.name)+'</span>':'';
+  const noteHtml=item.note?'<div class="item-note">'+esc(item.note)+'</div>':'';
   info.innerHTML='<div class="iname">'+esc(item.name)+'</div>'
-    +'<div class="imeta"><span class="qty-badge">'+esc(String(item.qty))+' '+esc(item.unit)+'</span>'+whoHtml+'</div>';
+    +'<div class="imeta"><span class="qty-badge">'+esc(String(item.qty))+' '+esc(item.unit)+'</span>'+whoHtml+'</div>'
+    +noteHtml;
 
   const ctrl=document.createElement('div');
   ctrl.className='item-ctrl';
@@ -1168,16 +1239,36 @@ function buildCard(item){
   return card;
 }
 
+/* ── QA state ────────────────────────── */
+let _qaQty=1, _qaUnit="יח'";
+function _setQaQty(v){
+  _qaQty=Math.max(1,v);
+  document.getElementById('qaQtyNum').textContent=_qaQty;
+}
+function _resetQaMore(){
+  _qaQty=1;
+  document.getElementById('qaQtyNum').textContent='1';
+  _qaUnit="יח'";
+  document.querySelectorAll('.qa-unit').forEach(b=>b.classList.toggle('active',b.dataset.unit==="יח'"));
+  selMember=null;renderQaMembers();
+  document.getElementById('qaNoteInp').value='';
+  document.getElementById('qaMore').classList.remove('open');
+  document.getElementById('qaDots').classList.remove('active');
+}
+
 /* ── Add (real-time) ─────────────────── */
 function submitItem(){
   const input=document.getElementById('qaInput');
   const name=input.value.trim();
   if(!name){input.focus();return;}
+  const noteVal=document.getElementById('qaNoteInp').value.trim();
   const item={
     id:uid(),name,
-    qty:Math.max(1,parseInt(document.getElementById('qaQty').value,10)||1),
-    unit:document.getElementById('qaUnit').value,
-    assignee:selMember,checked:false,
+    qty:_qaQty,
+    unit:_qaUnit,
+    assignee:selMember,
+    note:noteVal||undefined,
+    checked:false,
   };
   if(!items[activeId])items[activeId]=[];
   items[activeId].unshift(item);save();
@@ -1193,7 +1284,7 @@ function submitItem(){
   updateProgress(activeList());
   input.value='';input.focus();
   _acDrop.classList.remove('open');_acIdx=-1;
-  selMember=null;renderAssigneeBtn();
+  _resetQaMore();
   toast('"'+name+'" נוסף ✓');
 }
 
@@ -1376,59 +1467,57 @@ document.getElementById('qaBtn').addEventListener('click',()=>{
   _acDrop.classList.remove('open');submitItem();
 });
 document.getElementById('qaInput').addEventListener('keydown',()=>{});
-/* ── Assignee picker ─────────────────── */
-const assigneeBtn=document.getElementById('assigneeBtn');
-const assigneeDrop=document.getElementById('assigneeDrop');
 
-assigneeBtn.addEventListener('click',function(e){
-  e.stopPropagation();
-  const isOpen=assigneeDrop.classList.contains('open');
-  assigneeDrop.classList.toggle('open',!isOpen);
-  if(!isOpen)renderAssigneeDrop();
+/* ── Three-dots toggle ─────────────── */
+document.getElementById('qaDots').addEventListener('click',function(){
+  const more=document.getElementById('qaMore');
+  const isOpen=more.classList.contains('open');
+  more.classList.toggle('open',!isOpen);
+  this.classList.toggle('active',!isOpen);
+  if(!isOpen)renderQaMembers();
 });
 
-assigneeDrop.addEventListener('click',function(e){
-  const row=e.target.closest('.adrop-item');if(!row)return;
-  const mid=row.dataset.mid||null;
-  selMember=selMember===mid?null:mid;
-  assigneeDrop.classList.remove('open');
-  renderAssigneeBtn();
-});
-
-document.addEventListener('click',function(e){
-  if(!document.getElementById('assigneeWrap').contains(e.target))
-    assigneeDrop.classList.remove('open');
-});
-
-function renderAssigneeDrop(){
-  const members=house.members;
-  let html='<button class="adrop-item'+(selMember===null?' on':'')+'" data-mid="">'
-    +'<span class="adrop-avatar" style="background:var(--mut)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>'
-    +'<span class="adrop-none">ללא שיוך</span></button>';
-  members.forEach(m=>{
-    html+='<button class="adrop-item'+(selMember===m.id?' on':'')+'" data-mid="'+m.id+'">'
-      +'<span class="adrop-avatar" style="background:'+m.color+'">'+initials(m.name)+'</span>'
-      +esc(m.name)+'</button>';
-  });
-  assigneeDrop.innerHTML=html;
-}
-
-function renderAssigneeBtn(){
-  const m=selMember?getMember(selMember):null;
-  if(m){
-    assigneeBtn.className='assignee-btn has-member';
-    assigneeBtn.style.background=m.color;
-    assigneeBtn.innerHTML='<span style="font-size:12px;font-weight:700;color:#fff">'+initials(m.name)+'</span>';
-    assigneeBtn.title=m.name;
+/* ── Collapse qabar ────────────────── */
+document.getElementById('qaCollapse').addEventListener('click',function(){
+  const more=document.getElementById('qaMore');
+  if(more.classList.contains('open')){
+    more.classList.remove('open');
+    document.getElementById('qaDots').classList.remove('active');
   } else {
-    assigneeBtn.className='assignee-btn';
-    assigneeBtn.style.background='';
-    assigneeBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-    assigneeBtn.title='שיוך למשתתף';
+    document.getElementById('qabar').classList.remove('visible');
   }
+});
+
+/* ── Unit chips ────────────────────── */
+document.getElementById('qaUnitsRow').addEventListener('click',function(e){
+  const btn=e.target.closest('.qa-unit');
+  if(!btn)return;
+  _qaUnit=btn.dataset.unit;
+  document.querySelectorAll('.qa-unit').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+});
+/* ── Members row in more panel ─────── */
+function renderQaMembers(){
+  const row=document.getElementById('qaMembersRow');
+  if(!row)return;
+  let html='<button class="qa-none-btn'+(selMember===null?' selected':'')+'" data-mid="">✕</button>';
+  house.members.forEach(m=>{
+    html+='<button class="qa-member-av'+(selMember===m.id?' selected':'')+'" data-mid="'+m.id+'" title="'+esc(m.name)+'">'
+      +'<div class="qa-av-circle" style="background:'+m.color+'">'+initials(m.name)+'</div>'
+      +'<div class="qa-av-name">'+esc(m.name)+'</div>'
+      +'</button>';
+  });
+  row.innerHTML=html;
 }
 
-function renderChips(){renderAssigneeBtn();}
+document.getElementById('qaMembersRow').addEventListener('click',function(e){
+  const btn=e.target.closest('[data-mid]');if(!btn)return;
+  const mid=btn.dataset.mid||null;
+  selMember=(selMember===mid&&mid!==null)?null:mid;
+  renderQaMembers();
+});
+
+function renderChips(){/* members rendered in more panel on open */}
 
 /* ── WhatsApp share ──────────────────── */
 document.getElementById('waShareBtn').addEventListener('click', function () {
@@ -1476,14 +1565,10 @@ document.getElementById('waShareBtn').addEventListener('click', function () {
 
 /* ── Qty +/- buttons ─────────────────── */
 document.getElementById('qaQtyMinus').addEventListener('click',function(){
-  const inp=document.getElementById('qaQty');
-  const v=Math.max(1,parseInt(inp.value,10)||1);
-  inp.value=Math.max(1,v-1);
+  _setQaQty(_qaQty-1);
 });
 document.getElementById('qaQtyPlus').addEventListener('click',function(){
-  const inp=document.getElementById('qaQty');
-  const v=Math.max(1,parseInt(inp.value,10)||1);
-  inp.value=v+1;
+  _setQaQty(_qaQty+1);
 });
 
 /* ── Pencil button focuses title ─────── */
