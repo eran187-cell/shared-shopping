@@ -728,7 +728,8 @@ function save(){
     return;
   }
   _saving=true;
-  const payload={house,types:listTypes,items,nextId,_s:SESSION,_t:Date.now()};
+  // strip any `undefined` values — Firebase rejects the entire write if it sees one
+  const payload=JSON.parse(JSON.stringify({house,types:listTypes,items,nextId,_s:SESSION,_t:Date.now()}));
   console.log('[save] writing to Firebase, items=',totalItems,'houseId=',houseId);
   db.ref('houses/'+houseId).set(payload)
     .then(()=>{console.log('[save] OK');setTimeout(()=>{_saving=false;},600);})
@@ -1314,10 +1315,10 @@ function submitItem(){
     id:uid(),name,
     qty:_qaQty,
     unit:_qaUnit,
-    assignee:selMember,
-    note:noteVal||undefined,
+    assignee:selMember||null,
     checked:false,
   };
+  if(noteVal)item.note=noteVal; // only set note if non-empty (Firebase rejects undefined)
   if(!items[activeId])items[activeId]=[];
   items[activeId].unshift(item);save();
 
