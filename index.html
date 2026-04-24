@@ -1277,20 +1277,23 @@ function submitItem(){
   items[activeId].unshift(item);save();
 
   renderListView();
-  // highlight the newly added card (first in list) and scroll to it
+  // scroll to top so new item (inserted at front) is visible
   const wrap=document.getElementById('itemsWrap');
   if(wrap){
     const first=wrap.querySelector('.item-card');
-    if(first){first.classList.add('item-new');setTimeout(()=>first.classList.remove('item-new'),1100);}
+    if(first)first.classList.add('item-new');
     wrap.scrollTop=0;
+    setTimeout(()=>{if(first)first.classList.remove('item-new');},1100);
   }
-  // pop animation on ✓ button as immediate feedback
+  // ✓ button pop feedback
   const qab=document.getElementById('qaBtn');
   if(qab){qab.classList.add('pop');setTimeout(()=>qab.classList.remove('pop'),400);}
 
-  input.value='';input.focus();
+  input.value='';
   _acDrop.classList.remove('open');
   _resetQaMore();
+  toast('"'+name+'" נוסף ✓');
+  input.focus();
 }
 
 /* ── Change qty ──────────────────────── */
