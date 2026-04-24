@@ -719,7 +719,7 @@ let colorTargetMemberId=null;
 /* ── storage ─────────────────────────── */
 let _receivedRemote=false; // true once we've received at least one snapshot
 function save(){
-  if(!houseId)return;
+  if(!houseId){console.warn('[save] no houseId, skipped');return;}
   // Safety: don't overwrite Firebase with empty state before we've loaded it
   const totalItems=Object.values(items||{}).reduce((n,a)=>n+(a?.length||0),0);
   const isEmptyState=!house.name && (!house.members||!house.members.length) && totalItems===0;
@@ -729,9 +729,10 @@ function save(){
   }
   _saving=true;
   const payload={house,types:listTypes,items,nextId,_s:SESSION,_t:Date.now()};
+  console.log('[save] writing to Firebase, items=',totalItems,'houseId=',houseId);
   db.ref('houses/'+houseId).set(payload)
-    .then(()=>setTimeout(()=>{_saving=false;},600))
-    .catch(()=>{_saving=false;});
+    .then(()=>{console.log('[save] OK');setTimeout(()=>{_saving=false;},600);})
+    .catch(err=>{console.error('[save] FAILED:',err);_saving=false;toast('שמירה נכשלה: '+(err.message||err.code||'שגיאה'));});
 }
 function applyData(d){
   if(!d)return;
@@ -1320,6 +1321,12 @@ function submitItem(){
   if(!items[activeId])items[activeId]=[];
   items[activeId].unshift(item);save();
 
+  // Make sure the new (unchecked) item will be visible under the current filter.
+  // If user is on "done", switch to "pending" so they see what they just added.
+  if(activeFilter==='done'){
+    activeFilter='pending';
+    document.querySelectorAll('.fbtn').forEach(b=>b.classList.toggle('active',b.dataset.f==='pending'));
+  }
   renderListView();
   // scroll to top so new item (inserted at front) is visible + force reflow for animation
   const wrap=document.getElementById('itemsWrap');
