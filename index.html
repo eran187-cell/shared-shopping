@@ -221,11 +221,12 @@ a,button,input,select{touch-action:manipulation}
 /* Quick-add bar */
 .qabar{
   position:fixed;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:480px;
+  width:100%;max-width:480px;box-sizing:border-box;
   background:var(--sur);border-top:1px solid var(--bdr);
   /* account for home indicator on notched iPhones */
-  padding:12px 16px calc(14px + var(--sab));
+  padding:10px 12px calc(12px + var(--sab));
   z-index:30;box-shadow:0 -4px 20px rgba(0,0,0,.07);display:none;
+  overflow-x:clip; /* prevent horizontal overflow without clipping dropdown */
 }
 .qabar.visible{display:block}
 /* Autocomplete */
@@ -249,20 +250,23 @@ a,button,input,select{touch-action:manipulation}
 .ac-new-tag{font-size:12px;color:var(--mut);background:var(--bg);padding:2px 7px;border-radius:99px;flex-shrink:0;margin-right:8px}
 /* ── Quick-add bar (redesigned) ───────── */
 /* Main row */
-.qa-row{display:flex;align-items:center;gap:8px}
+.qa-row{display:flex;align-items:center;gap:8px;width:100%;min-width:0}
 /* Input + qty display box */
 .qa-inp-box{
-  flex:1;display:flex;align-items:center;
+  flex:1 1 0;min-width:0;display:flex;align-items:center;
   background:var(--bg);border:1.5px solid var(--bdr);border-radius:12px;
   overflow:visible;position:relative;transition:border-color .15s;
+  /* clip internal content horizontally only, keep dropdown visible */
+  -webkit-mask-image:none;
 }
 .qa-inp-box:focus-within{border-color:var(--pri);background:var(--sur)}
 /* font-size ≥ 16px prevents iOS zoom on focus */
 .qa-inp{
-  flex:1;padding:13px 14px 13px 6px;border:none;outline:none;
+  flex:1 1 0;min-width:0;width:0;/* force shrink below content size */
+  padding:13px 10px 13px 4px;border:none;outline:none;
   background:transparent;font-size:16px;color:var(--txt);
   font-family:inherit;text-align:right;direction:rtl;
-  -webkit-appearance:none;min-width:0;
+  -webkit-appearance:none;
 }
 .qa-inp::placeholder{color:var(--mut)}
 /* Qty separator + stepper inside input box */
