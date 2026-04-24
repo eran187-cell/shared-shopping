@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "shopping-app",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-Command", "$l=New-Object Net.HttpListener;$l.Prefixes.Add('http://localhost:3457/');$l.Start();while($l.IsListening){$c=$l.GetContext();$f='C:\\Users\\topel\\ERAN LOCAL\\AI PROJECT\\shopping list\\index.html';$b=[IO.File]::ReadAllBytes($f);$c.Response.ContentType='text/html; charset=utf-8';$c.Response.ContentLength64=$b.Length;$c.Response.OutputStream.Write($b,0,$b.Length);$c.Response.Close()}"],
+      "port": 3457
+    }
+  ]
+}

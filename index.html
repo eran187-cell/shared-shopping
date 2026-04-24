@@ -419,7 +419,7 @@ a,button,input,select{touch-action:manipulation}
 .house-code-hint{font-size:12px;color:var(--mut);margin-top:6px}
 
 /* Toast */
-.toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%) translateY(8px);background:#1a1d2e;color:#fff;padding:9px 18px;border-radius:99px;font-size:13px;font-weight:500;z-index:99;opacity:0;transition:all .22s;pointer-events:none;white-space:nowrap}
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-8px);background:#2dba7a;color:#fff;padding:10px 20px;border-radius:99px;font-size:14px;font-weight:600;z-index:9999;opacity:0;transition:all .22s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(45,186,122,0.35)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* ── Splash screen ─────────────────────────── */
 #splash{
@@ -743,9 +743,11 @@ function startListener(id){
   if(_fbRef){_fbRef.off();_fbRef=null;}
   _fbRef=db.ref('houses/'+id);
   _fbRef.on('value',snap=>{
-    if(_saving)return;
     const d=snap.val();
-    if(!d||d._s===SESSION)return;
+    if(!d)return;
+    // ignore only our own echo; still accept updates from other sessions
+    // (even while we are in the middle of saving) so sync isn't blocked
+    if(d._s===SESSION)return;
     applyData(d);
     renderCurrent();
   });
@@ -1278,10 +1280,14 @@ function _resetQaMore(){
 }
 
 /* ── Add (real-time) ─────────────────── */
+let _submitLock=false;
 function submitItem(){
+  if(_submitLock)return;
   const input=document.getElementById('qaInput');
   const name=input.value.trim();
   if(!name){input.focus();return;}
+  _submitLock=true;
+  setTimeout(()=>{_submitLock=false;},600);
   const noteVal=document.getElementById('qaNoteInp').value.trim();
   const item={
     id:uid(),name,
@@ -1454,9 +1460,11 @@ _acInput.addEventListener('input',function(){
 });
 
 _acDrop.addEventListener('mousedown',e=>e.preventDefault());
-_acDrop.addEventListener('click',function(e){
+function _acPick(e){
   const item=e.target.closest('.ac-item');
   if(!item)return;
+  e.preventDefault();
+  e.stopPropagation();
   const val=item.dataset.val;
   // save custom product to Firebase
   if(item.dataset.new==='1'&&val&&houseId)db.ref('houses/'+houseId+'/customProducts').push(val);
@@ -1464,7 +1472,11 @@ _acDrop.addEventListener('click',function(e){
   _acInput.value=val;_acTyped=val;_acGhost='';
   _acDrop.classList.remove('open');
   submitItem();
-});
+}
+// touchend handles mobile reliably; also swallow the follow-up click to
+// prevent ghost-click double-fire on the ✓ button underneath
+_acDrop.addEventListener('touchend',_acPick);
+_acDrop.addEventListener('click',_acPick);
 document.addEventListener('click',e=>{
   if(!document.getElementById('acWrap').contains(e.target))_acDrop.classList.remove('open');
 });

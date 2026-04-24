@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:api.anthropic.com)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(curl -s \"https://api.anthropic.com/v1/design/h/8qZQ1UV_Zn2qMs4VWF_xjQ?open_file=Shared+Shopping+App.html\" -L --max-time 15)",
+      "Bash(curl -v \"https://api.anthropic.com/v1/design/h/8qZQ1UV_Zn2qMs4VWF_xjQ?open_file=Shared+Shopping+App.html\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npx *)",
+      "Bash(where node *)",
+      "Bash(where python *)",
+      "Bash(where python3 *)",
+      "Read(//c/Users/topel/AppData/Local/Programs//**)",
+      "Read(//c/Program Files//**)",
+      "Bash(git --version)",
+      "Bash(gh repo *)",
+      "Bash(\"/c/Program Files/Git/cmd/git.exe\" -C \"C:/Users/topel/ERAN LOCAL/AI PROJECT/shopping list\" status)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('index.html','utf8'\\);try{eval\\(html.match\\(/<script>\\([\\\\s\\\\S]*\\)<\\\\/script>/\\)[1]\\)}catch\\(e\\){console.log\\('JS ERROR:',e.message\\)}\")",
+      "Bash(curl -s \"https://api.github.com/users/eran187-cell/repos?per_page=20\")",
+      "Bash(curl -s \"https://eran187-cell.github.io/shared-shopping/sw.js\")",
+      "Bash(curl -s \"https://eran187-cell.github.io/shared-shopping/index.html\")"
+    ]
+  }
+}
