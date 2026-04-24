@@ -265,28 +265,20 @@ a,button,input,select{touch-action:manipulation}
   -webkit-appearance:none;min-width:0;
 }
 .qa-inp::placeholder{color:var(--mut)}
-.qa-sep{width:1px;height:26px;background:var(--bdr);flex-shrink:0}
-.qa-qty-num{
-  padding:0 12px;font-size:18px;font-weight:700;color:var(--txt);
-  flex-shrink:0;min-width:40px;text-align:center;cursor:default;
-}
-/* Large circle qty buttons (match image) */
-.qa-circ{
-  width:46px;height:46px;border-radius:50%;
-  background:var(--bg);border:1.5px solid var(--bdr);
-  color:var(--txt);font-size:24px;font-weight:300;cursor:pointer;
+/* Qty separator + stepper inside input box */
+.qa-sep{width:1px;align-self:stretch;background:var(--bdr);flex-shrink:0}
+.qa-qty-btn{
+  width:36px;align-self:stretch;border:none;background:transparent;
+  color:var(--pri);font-size:22px;font-weight:300;cursor:pointer;
   flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  transition:background .12s,transform .1s;line-height:1;
+  transition:background .1s;line-height:1;padding:0;
 }
-.qa-circ:active{transform:scale(.9);background:var(--bdr)}
-/* Collapse chevron */
-.qa-collapse{
-  width:36px;height:46px;border-radius:10px;border:none;
-  background:transparent;color:var(--mut);font-size:15px;
-  cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  transition:background .12s;
+.qa-qty-btn:active{background:var(--pril)}
+.qa-qty-num{
+  padding:0 8px;font-size:17px;font-weight:700;color:var(--txt);
+  flex-shrink:0;min-width:32px;text-align:center;cursor:default;
+  border-left:1px solid var(--bdr);border-right:1px solid var(--bdr);
 }
-.qa-collapse:hover{background:var(--bg);color:var(--txt)}
 /* Three-dots button */
 .qa-dots{
   width:40px;height:46px;border-radius:10px;
@@ -571,22 +563,19 @@ a,button,input,select{touch-action:manipulation}
     <button class="qa-submit" id="qaBtn" title="הוסף פריט">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </button>
-    <!-- Item name + qty -->
+    <!-- Item name + integrated qty stepper -->
     <div class="qa-inp-box" id="acWrap">
       <input class="qa-inp" id="qaInput" type="text" placeholder="הוספת פריט…"
              autocomplete="off" autocorrect="off" spellcheck="false"/>
       <div class="qa-sep"></div>
+      <!-- Qty stepper lives INSIDE the box -->
+      <button class="qa-qty-btn" id="qaQtyMinus" aria-label="הפחת כמות">−</button>
       <div class="qa-qty-num" id="qaQtyNum">1</div>
+      <button class="qa-qty-btn" id="qaQtyPlus" aria-label="הגדל כמות">+</button>
       <div class="ac-drop" id="acDrop"></div>
     </div>
     <!-- Three dots -->
     <button class="qa-dots" id="qaDots" title="אפשרויות נוספות">⋮</button>
-    <!-- Qty + circle -->
-    <button class="qa-circ" id="qaQtyPlus" aria-label="הגדל כמות">+</button>
-    <!-- Qty − circle -->
-    <button class="qa-circ" id="qaQtyMinus" aria-label="הפחת כמות">−</button>
-    <!-- Collapse -->
-    <button class="qa-collapse" id="qaCollapse" aria-label="כווץ">∨</button>
   </div>
 
   <!-- More options panel (hidden by default) -->
@@ -1477,8 +1466,9 @@ document.getElementById('qaDots').addEventListener('click',function(){
   if(!isOpen)renderQaMembers();
 });
 
-/* ── Collapse qabar ────────────────── */
-document.getElementById('qaCollapse').addEventListener('click',function(){
+/* ── Collapse qabar (via ⋮ long-press or back gesture; element may not exist) */
+(function(){const el=document.getElementById('qaCollapse');if(!el)return;
+el.addEventListener('click',function(){
   const more=document.getElementById('qaMore');
   if(more.classList.contains('open')){
     more.classList.remove('open');
@@ -1486,7 +1476,7 @@ document.getElementById('qaCollapse').addEventListener('click',function(){
   } else {
     document.getElementById('qabar').classList.remove('visible');
   }
-});
+});})();
 
 /* ── Unit chips ────────────────────── */
 document.getElementById('qaUnitsRow').addEventListener('click',function(e){
