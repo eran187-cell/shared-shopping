@@ -98,6 +98,8 @@ a,button,input,select{touch-action:manipulation}
 .btn-primary:hover{background:#25a067}
 .btn-secondary{width:100%;padding:12px;border-radius:12px;background:var(--bg);color:var(--txt);border:1.5px solid var(--bdr);font-size:15px;cursor:pointer;margin-top:8px;transition:all .15s;font-family:inherit}
 .btn-secondary:hover{border-color:var(--pri);color:var(--pri)}
+.btn-leave{width:100%;padding:12px;border-radius:12px;background:transparent;color:var(--red);border:1.5px solid var(--red);font-size:15px;cursor:pointer;margin-top:16px;transition:all .15s;font-family:inherit;opacity:.75}
+.btn-leave:hover{opacity:1;background:rgba(231,76,60,.07)}
 
 /* Setup top-bar (for settings mode) */
 .setup-topbar{background:var(--sur);padding:14px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
@@ -495,6 +497,7 @@ a,button,input,select{touch-action:manipulation}
       <span>📲</span> הוספת קיצור לדף הבית
     </button>
     <button class="btn-secondary" id="cancelSetupBtn" style="display:none">ביטול</button>
+    <button class="btn-leave" id="leaveHouseBtn" style="display:none">🚪 יציאה מהקבוצה</button>
   </div>
 </div>
 
@@ -824,6 +827,7 @@ function openSetup(mode){
   document.getElementById('setupHeader').style.display=mode==='setup'?'block':'none';
   document.getElementById('saveSetupBtn').style.display=mode==='setup'?'block':'none';
   document.getElementById('cancelSetupBtn').style.display=mode==='settings'?'block':'none';
+  document.getElementById('leaveHouseBtn').style.display=mode==='settings'?'block':'none';
   const hcc=document.getElementById('houseCodeCard');
   if(houseId&&mode==='settings'){
     document.getElementById('houseCodeDisplay').textContent=houseId;
@@ -947,6 +951,20 @@ document.getElementById('settingsBack').addEventListener('click',function(){
 
 // Cancel: discard changes and go home
 document.getElementById('cancelSetupBtn').addEventListener('click',goHome);
+
+// Leave house — stops listener, clears houseId, returns to onboarding
+document.getElementById('leaveHouseBtn').addEventListener('click',function(){
+  showConfirm('לצאת מהקבוצה? תוכל להצטרף מחדש עם קוד הבית.',function(){
+    if(_fbRef){_fbRef.off();_fbRef=null;}
+    localStorage.removeItem('sl3_houseId');
+    houseId=null;
+    house={name:'',members:[]};listTypes=[];items={};nextId=1;activeId=null;
+    document.getElementById('home').classList.add('hidden');
+    document.getElementById('list').classList.add('slide-right');
+    document.getElementById('qabar').classList.remove('visible');
+    openSetup('setup');
+  });
+});
 
 /* ══ HOME VIEW ═══════════════════════════════ */
 /* ══ CONFIRM MODAL ═══════════════════ */
