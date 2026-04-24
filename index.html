@@ -226,7 +226,7 @@ a,button,input,select{touch-action:manipulation}
   /* account for home indicator on notched iPhones */
   padding:10px 12px calc(12px + var(--sab));
   z-index:30;box-shadow:0 -4px 20px rgba(0,0,0,.07);display:none;
-  overflow-x:clip; /* prevent horizontal overflow without clipping dropdown */
+  overflow:visible; /* must stay visible so dropdown above bar isn't clipped */
 }
 .qabar.visible{display:block}
 /* Autocomplete */
@@ -1273,16 +1273,17 @@ function submitItem(){
   items[activeId].unshift(item);save();
 
   const wrap=document.getElementById('itemsWrap');
-  const empty=wrap.querySelector('.empty-list');
-  if(empty)wrap.innerHTML='';
-
-  if(activeFilter==='all'||activeFilter==='pending'){
-    const card=buildCard(item);
-    wrap.insertBefore(card,wrap.firstChild);
+  if(wrap){
+    const empty=wrap.querySelector('.empty-list');
+    if(empty)wrap.innerHTML='';
+    if(activeFilter==='all'||activeFilter==='pending'){
+      const card=buildCard(item);
+      wrap.insertBefore(card,wrap.firstChild);
+    }
   }
   updateProgress(activeList());
   input.value='';input.focus();
-  _acDrop.classList.remove('open');_acIdx=-1;
+  _acDrop.classList.remove('open');
   _resetQaMore();
   toast('"'+name+'" נוסף ✓');
 }
@@ -1387,63 +1388,42 @@ function acApply(typed){
   _acDrop.classList.remove('open');
   if(!typed||_acDeleting){_acGhost='';return;}
   const results=acSearch(typed);
-  const top=results[0];
-  if(top&&top.length>typed.length&&top.toLowerCase().startsWith(typed.toLowerCase())){
-    _acGhost=top;
-    if(_acInput.value!==top)_acInput.value=top;
-    requestAnimationFrame(()=>_acInput.setSelectionRange(typed.length,top.length));
-    // "הוסף חדש" hint for new products
-  } else {
-    _acGhost='';
-    if(_acInput.value!==typed)_acInput.value=typed;
-    // show "הוסף חדש" if no match at all
-    if(typed&&!results.length){
-      _acDrop.innerHTML=`<div class="ac-item ac-new-item" data-val="${esc(typed)}" data-new="1">${esc(typed)}<span class="ac-new-tag">הוסף חדש</span></div>`;
-      _acDrop.classList.add('open');
+
+  // Always reset input to typed text (no ghost inline selection)
+  _acGhost='';
+  if(_acInput.value!==typed)_acInput.value=typed;
+
+  if(results.length){
+    // Build dropdown with up to 8 matches
+    const show=results.slice(0,8);
+    const exactMatch=results.some(r=>r.toLowerCase()===typed.toLowerCase());
+    let html=show.map(r=>`<div class="ac-item" data-val="${esc(r)}">${esc(r)}</div>`).join('');
+    if(!exactMatch){
+      html+=`<div class="ac-item ac-new-item" data-val="${esc(typed)}" data-new="1">${esc(typed)}<span class="ac-new-tag">הוסף חדש</span></div>`;
     }
+    _acDrop.innerHTML=html;
+    _acDrop.classList.add('open');
+  } else {
+    // No results → "הוסף חדש" only
+    _acDrop.innerHTML=`<div class="ac-item ac-new-item" data-val="${esc(typed)}" data-new="1">${esc(typed)}<span class="ac-new-tag">הוסף חדש</span></div>`;
+    _acDrop.classList.add('open');
   }
 }
 
 _acInput.addEventListener('keydown',function(e){
   _acDeleting=(e.key==='Backspace'||e.key==='Delete');
-  if(_acGhost){
-    // Accept ghost: ArrowLeft (RTL forward), Tab, End
-    if(e.key==='ArrowLeft'||e.key==='Tab'||e.key==='End'){
-      e.preventDefault();
-      _acInput.value=_acGhost;_acTyped=_acGhost;_acGhost='';
-      _acInput.setSelectionRange(_acTyped.length,_acTyped.length);
-      return;
-    }
-    if(e.key==='Enter'){
-      e.preventDefault();
-      _acInput.value=_acGhost;_acTyped=_acGhost;_acGhost='';
-      _acInput.setSelectionRange(_acTyped.length,_acTyped.length);
-      submitItem();return;
-    }
-    if(e.key==='Escape'){
-      e.preventDefault();
-      _acInput.value=_acTyped;_acGhost='';
-      _acInput.setSelectionRange(_acTyped.length,_acTyped.length);return;
-    }
-  } else {
-    if(e.key==='Enter'){_acDrop.classList.remove('open');submitItem();}
+  if(e.key==='Enter'){
+    e.preventDefault();
+    _acDrop.classList.remove('open');
+    submitItem();
+  }
+  if(e.key==='Escape'){
+    _acDrop.classList.remove('open');
   }
 });
 
 _acInput.addEventListener('input',function(){
-  const val=this.value;
-  if(_acGhost){
-    // If ghost was active and value shrank → backspace cleared ghost
-    if(val.length<=_acTyped.length||_acDeleting){
-      _acGhost='';_acDeleting=false;_acTyped=val;
-      _acDrop.classList.remove('open');return;
-    }
-    // User typed through ghost (browser replaced selection with new char)
-    _acDeleting=false;
-    acApply(val);
-  } else {
-    acApply(val);
-  }
+  acApply(this.value);
   _acDeleting=false;
 });
 
@@ -1452,20 +1432,43 @@ _acDrop.addEventListener('click',function(e){
   const item=e.target.closest('.ac-item');
   if(!item)return;
   const val=item.dataset.val;
+  // save custom product to Firebase
   if(item.dataset.new==='1'&&val&&houseId)db.ref('houses/'+houseId+'/customProducts').push(val);
+  // set value and immediately submit — no second tap needed
   _acInput.value=val;_acTyped=val;_acGhost='';
-  _acDrop.classList.remove('open');_acInput.focus();
+  _acDrop.classList.remove('open');
+  submitItem();
 });
 document.addEventListener('click',e=>{
   if(!document.getElementById('acWrap').contains(e.target))_acDrop.classList.remove('open');
 });
 
 /* ── Quick-add events ────────────────── */
-document.getElementById('qaBtn').addEventListener('click',()=>{
-  if(_acGhost){_acInput.value=_acGhost;_acTyped=_acGhost;_acGhost='';}
-  _acDrop.classList.remove('open');submitItem();
-});
-document.getElementById('qaInput').addEventListener('keydown',()=>{});
+(function(){
+  function doSubmit(){
+    const firstMatch=_acDrop.querySelector('.ac-item:not(.ac-new-item)');
+    if(firstMatch&&_acDrop.classList.contains('open')){
+      const val=firstMatch.dataset.val;
+      _acInput.value=val;_acTyped=val;
+    }
+    _acDrop.classList.remove('open');
+    submitItem();
+  }
+  const btn=document.getElementById('qaBtn');
+  let _tapped=false;
+  btn.addEventListener('touchend',function(e){
+    e.preventDefault();
+    _tapped=true;
+    toast('🟢 tap: "'+_acInput.value+'"');
+    doSubmit();
+    setTimeout(()=>{_tapped=false;},500);
+  });
+  btn.addEventListener('click',function(){
+    if(_tapped)return;
+    toast('🟢 click: "'+_acInput.value+'"');
+    doSubmit();
+  });
+})();
 
 /* ── Three-dots: open panel / close panel on second press ── */
 document.getElementById('qaDots').addEventListener('click',function(){
