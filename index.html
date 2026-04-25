@@ -675,7 +675,7 @@ a,button,input,select{touch-action:manipulation}
 <div class="overlay" id="emojiOverlay">
   <div class="sheet">
     <h3>בחר אימוג'י</h3>
-    <div id="emojiGrid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin:12px 0;font-size:26px;text-align:center"></div>
+    <div id="emojiGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:12px auto;font-size:24px;text-align:center;max-width:340px;justify-items:center"></div>
     <input id="emojiCustom" type="text" maxlength="4" placeholder="או הקלד אימוג'י משלך..." style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:18px;text-align:center;margin-top:6px"/>
     <div class="sheet-actions">
       <button class="btn-primary" id="emojiConfirm">אישור</button>
@@ -1144,7 +1144,7 @@ function openEmojiPicker(current,onPick){
   _emojiCallback=onPick;
   const grid=document.getElementById('emojiGrid');
   grid.innerHTML=EMOJI_PALETTE.map(e=>
-    '<div data-e="'+e+'" style="padding:6px;cursor:pointer;border-radius:6px;'
+    '<div data-e="'+e+'" style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;'
     +(e===current?'background:rgba(45,186,122,.25);':'')+'">'+e+'</div>'
   ).join('');
   grid.querySelectorAll('[data-e]').forEach(el=>{
