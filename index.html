@@ -771,14 +771,15 @@ async function recordHouseStat(){
     const hash=await _getHouseHash();
     const totalItems=Object.values(items||{}).reduce((n,a)=>n+(a?.length||0),0);
     const doneItems=Object.values(items||{}).reduce((n,a)=>n+(a?.filter(x=>x.checked).length||0),0);
+    const cleanName=(house.name||'').trim().slice(0,40);
     const payload={
-      n:(house.name||'').trim().slice(0,40)||'—',
       m:(house.members||[]).length,
       i:totalItems,
       d:doneItems,
       l:(listTypes||[]).length,
       t:Date.now()
     };
+    if(cleanName)payload.n=cleanName;
     console.log('[stats house] writing',hash,payload);
     db.ref('stats/houses/'+hash).set(payload)
       .then(()=>console.log('[stats house] OK'))
@@ -2042,15 +2043,18 @@ async function loadAdminStats(){
       +'</div>';
 
     // ── house list (sorted by activity: items desc, then last update desc)
-    const housesArr=Object.values(houses).sort((a,b)=>(b.i||0)-(a.i||0)||(b.t||0)-(a.t||0));
-    if(housesArr.length){
-      document.getElementById('adminHouseList').innerHTML=housesArr.map((h,i)=>{
+    const housesEntries=Object.entries(houses).sort((a,b)=>(b[1].i||0)-(a[1].i||0)||(b[1].t||0)-(a[1].t||0));
+    if(housesEntries.length){
+      document.getElementById('adminHouseList').innerHTML=housesEntries.map(([hash,h],i)=>{
         const ageDays=h.t?Math.floor((Date.now()-h.t)/86400000):null;
         const ageLabel=ageDays===null?'—':ageDays===0?'פעיל היום':ageDays===1?'אתמול':'לפני '+ageDays+' ימים';
         const ageColor=ageDays===null?'var(--mut)':ageDays<=1?'var(--pri)':ageDays<=7?'var(--mut)':'#999';
+        // treat legacy '—' or empty as "no name", show short hash hint instead
+        const hasName=h.n && h.n!=='—' && h.n.trim();
+        const displayName=hasName?h.n:'<span style="color:var(--mut);font-style:italic">בית #'+hash.slice(0,6)+'</span>';
         return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr)">'
           +'<span style="font-size:12px;color:var(--mut);min-width:24px;text-align:center">'+(i+1)+'</span>'
-          +'<span style="font-size:14px;font-weight:600;flex:1">'+esc(h.n||'—')+'</span>'
+          +'<span style="font-size:14px;font-weight:600;flex:1">'+(hasName?esc(h.n):displayName)+'</span>'
           +'<span style="font-size:12px;color:var(--mut)">👥 '+(h.m||0)+'</span>'
           +'<span style="font-size:12px;color:var(--mut)">🛒 '+(h.i||0)+'</span>'
           +'<span style="font-size:11px;color:'+ageColor+';min-width:80px;text-align:left">'+ageLabel+'</span>'
