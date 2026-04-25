@@ -566,7 +566,6 @@ a,button,input,select{touch-action:manipulation}
              border-bottom:1.5px dashed var(--bdr);transition:border-color .15s,border-style .15s"
       onfocus="this.style.borderBottomColor='var(--pri)';this.style.borderBottomStyle='solid'"
       onblur="this.style.borderBottomColor='var(--bdr)';this.style.borderBottomStyle='dashed';saveListName(this.value)"/>
-    <button class="edit-title-btn" id="editTitleBtn" title="עריכת שם">✏</button>
     <button class="icon-btn" id="waShareBtn" title="שיתוף" style="color:var(--txt);opacity:.55">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
     </button>
@@ -1883,12 +1882,6 @@ document.getElementById('qaQtyMinus').addEventListener('click',function(){
 });
 document.getElementById('qaQtyPlus').addEventListener('click',function(){
   _setQaQty(_qaQty+1);
-});
-
-/* ── Pencil button focuses title ─────── */
-document.getElementById('editTitleBtn').addEventListener('click',function(){
-  const inp=document.getElementById('listTitle');
-  inp.focus();inp.select();
 });
 
 /* ── Edit list name ──────────────────── */
