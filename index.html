@@ -706,6 +706,11 @@ a,button,input,select{touch-action:manipulation}
 
     <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
       <h3 style="margin:0 0 10px 0;font-size:15px">🏠 רשימת בתים</h3>
+      <div style="display:flex;gap:6px;margin-bottom:12px;align-items:stretch">
+        <input id="adminDelCode" type="text" placeholder="קוד בית למחיקה (4-12 תווים)" maxlength="12"
+          style="flex:1;padding:8px 10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-family:monospace;font-size:13px;text-transform:uppercase"/>
+        <button id="adminDelHouseBtn" style="padding:8px 14px;border:none;border-radius:8px;background:#e74c3c;color:#fff;font-weight:600;font-size:13px;cursor:pointer">🗑 מחק בית</button>
+      </div>
       <div id="adminHouseList"></div>
     </div>
 
@@ -2182,24 +2187,29 @@ async function loadAdminStats(){
 
     // ── house list (sorted by activity: items desc, then last update desc)
     const housesEntries=Object.entries(houses).sort((a,b)=>(b[1].i||0)-(a[1].i||0)||(b[1].t||0)-(a[1].t||0));
+    const listEl=document.getElementById('adminHouseList');
     if(housesEntries.length){
-      document.getElementById('adminHouseList').innerHTML=housesEntries.map(([hash,h],i)=>{
+      listEl.innerHTML=housesEntries.map(([hash,h],i)=>{
         const ageDays=h.t?Math.floor((Date.now()-h.t)/86400000):null;
         const ageLabel=ageDays===null?'—':ageDays===0?'פעיל היום':ageDays===1?'אתמול':'לפני '+ageDays+' ימים';
         const ageColor=ageDays===null?'var(--mut)':ageDays<=1?'var(--pri)':ageDays<=7?'var(--mut)':'#999';
-        // treat legacy '—' or empty as "no name", show short hash hint instead
         const hasName=h.n && h.n!=='—' && h.n.trim();
-        const displayName=hasName?h.n:'<span style="color:var(--mut);font-style:italic">בית #'+hash.slice(0,6)+'</span>';
+        const displayName=hasName?esc(h.n):'<span style="color:var(--mut);font-style:italic">בית #'+hash.slice(0,6)+'</span>';
         return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr)">'
           +'<span style="font-size:12px;color:var(--mut);min-width:24px;text-align:center">'+(i+1)+'</span>'
-          +'<span style="font-size:14px;font-weight:600;flex:1">'+(hasName?esc(h.n):displayName)+'</span>'
+          +'<span style="font-size:14px;font-weight:600;flex:1">'+displayName+'</span>'
           +'<span style="font-size:12px;color:var(--mut)">👥 '+(h.m||0)+'</span>'
           +'<span style="font-size:12px;color:var(--mut)">🛒 '+(h.i||0)+'</span>'
-          +'<span style="font-size:11px;color:'+ageColor+';min-width:80px;text-align:left">'+ageLabel+'</span>'
+          +'<span style="font-size:11px;color:'+ageColor+';min-width:70px;text-align:left">'+ageLabel+'</span>'
+          +'<button data-del-hash="'+hash+'" title="מחק רק מהדשבורד" style="background:transparent;border:1px solid var(--bdr);color:#e74c3c;width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:12px;padding:0">✕</button>'
           +'</div>';
       }).join('');
+      // wire X buttons
+      listEl.querySelectorAll('[data-del-hash]').forEach(btn=>{
+        btn.addEventListener('click',()=>adminDeleteStatsRow(btn.dataset.delHash));
+      });
     } else {
-      document.getElementById('adminHouseList').innerHTML='<div style="text-align:center;color:var(--mut);padding:20px">אין עדיין נתוני בתים.</div>';
+      listEl.innerHTML='<div style="text-align:center;color:var(--mut);padding:20px">אין עדיין נתוני בתים.</div>';
     }
 
     // ── top 20 items (decode names from itemFreq values)
@@ -2228,6 +2238,44 @@ async function loadAdminStats(){
 }
 document.getElementById('adminRefreshBtn').addEventListener('click',loadAdminStats);
 document.getElementById('adminBackBtn').addEventListener('click',()=>{location.href=location.pathname;});
+
+/* ── Admin delete operations ────────────────────────── */
+async function adminDeleteHouseByCode(){
+  const inp=document.getElementById('adminDelCode');
+  const code=(inp.value||'').trim().toUpperCase();
+  if(code.length<4||code.length>12){
+    document.getElementById('adminError').textContent='קוד לא תקין (4-12 תווים).';
+    return;
+  }
+  if(!confirm('למחוק לחלוטין את בית "'+code+'"?\n\nכל הנתונים, החברים והפריטים יימחקו לתמיד. פעולה זו אינה הפיכה.'))return;
+  try{
+    document.getElementById('adminError').textContent='מוחק...';
+    // 1) delete house data
+    await db.ref('houses/'+code).remove();
+    // 2) compute hash and delete stats entry
+    const hash=(await _sha256hex('sl3-salt-'+code)).slice(0,16);
+    await db.ref('stats/houses/'+hash).remove();
+    inp.value='';
+    document.getElementById('adminError').textContent='';
+    loadAdminStats();
+    alert('בית "'+code+'" נמחק בהצלחה.');
+  }catch(err){
+    document.getElementById('adminError').textContent='מחיקה נכשלה: '+(err.message||err.code||err);
+  }
+}
+async function adminDeleteStatsRow(hash){
+  if(!confirm('למחוק את רשומת הבית הזו מהדשבורד?\n\nהבית עצמו לא יימחק — רק תיעלם מהסטטיסטיקה. אם הבית עדיין פעיל הוא יחזור להופיע בפעולה הבאה שלו.'))return;
+  try{
+    await db.ref('stats/houses/'+hash).remove();
+    loadAdminStats();
+  }catch(err){
+    document.getElementById('adminError').textContent='מחיקה נכשלה: '+(err.message||err.code||err);
+  }
+}
+document.getElementById('adminDelHouseBtn').addEventListener('click',adminDeleteHouseByCode);
+document.getElementById('adminDelCode').addEventListener('keydown',e=>{
+  if(e.key==='Enter')adminDeleteHouseByCode();
+});
 
 if(_isAdmin){
   showAdmin();
