@@ -766,14 +766,18 @@ async function recordHouseStat(){
     const hash=await _getHouseHash();
     const totalItems=Object.values(items||{}).reduce((n,a)=>n+(a?.length||0),0);
     const doneItems=Object.values(items||{}).reduce((n,a)=>n+(a?.filter(x=>x.checked).length||0),0);
-    db.ref('stats/houses/'+hash).set({
+    const payload={
       m:(house.members||[]).length,
       i:totalItems,
       d:doneItems,
       l:(listTypes||[]).length,
       t:Date.now()
-    });
-  }catch(e){console.warn('[stats house]',e);}
+    };
+    console.log('[stats house] writing',hash,payload);
+    db.ref('stats/houses/'+hash).set(payload)
+      .then(()=>console.log('[stats house] OK'))
+      .catch(err=>console.error('[stats house] FAILED:',err.code,err.message));
+  }catch(e){console.error('[stats house] hash failed',e);}
 }
 function _safeItemKey(name){
   // Firebase keys can't contain . # $ [ ] /
@@ -788,19 +792,25 @@ function recordItemStat(name){
   if(!name||!houseId)return;
   const key=_safeItemKey(name);
   if(!key)return;
-  // transaction prevents lost increments under concurrent adds
+  console.log('[stats item] incrementing',name,'->',key);
   db.ref('stats/itemFreq/'+key).transaction(curr=>{
     if(!curr)return {n:name.trim(),c:1};
     return {n:curr.n||name.trim(),c:(curr.c||0)+1};
-  }).catch(()=>{});
+  },(err,committed,snap)=>{
+    if(err)console.error('[stats item] FAILED:',err.code,err.message);
+    else if(committed)console.log('[stats item] OK',snap.val());
+  });
 }
 function recordLogin(){
   if(!houseId)return;
   try{
     const day=new Date().toISOString().slice(0,10); // YYYY-MM-DD UTC
     const dev=deviceId.slice(0,12);
-    db.ref('stats/logins/'+day+'/'+dev).set(Date.now()).catch(()=>{});
-  }catch(e){}
+    console.log('[stats login] writing',day,dev);
+    db.ref('stats/logins/'+day+'/'+dev).set(Date.now())
+      .then(()=>console.log('[stats login] OK'))
+      .catch(err=>console.error('[stats login] FAILED:',err.code,err.message));
+  }catch(e){console.error('[stats login]',e);}
 }
 
 /* ── state ───────────────────────────── */
