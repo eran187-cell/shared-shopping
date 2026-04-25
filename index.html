@@ -1314,10 +1314,17 @@ document.getElementById('backBtn').addEventListener('click',goHome);
 
 function renderListView(){
   const wrap=document.getElementById('itemsWrap');
+  if(!wrap)return;
+  // active list may have been deleted/renamed by a remote update
+  const lt=getLT(activeId);
+  if(!lt){
+    // fall back to first available list, or go home if none
+    if(listTypes&&listTypes.length){activeId=listTypes[0].id;return renderListView();}
+    goHome();return;
+  }
   const list=filtered(activeList());
   updateProgress(activeList());
   if(!list.length){
-    const lt=getLT(activeId);
     wrap.innerHTML='<div class="empty-list"><div class="ei">'+lt.emoji+'</div>'
       +'<p>'+(activeList().length?'אין פריטים בפילטר הנוכחי.':'הרשימה ריקה.<br>הוספת פריטים אפשרית למטה.')+'</p></div>';
     return;
