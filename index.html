@@ -144,14 +144,22 @@ a,button,input,select{touch-action:manipulation}
 @keyframes delPop{from{transform:scale(0)}to{transform:scale(1)}}
 .lt-grid.edit-mode .lt-card:not(.add-card){cursor:grab;animation:none}
 .lt-grid.edit-mode .lt-emoji,.lt-grid.edit-mode .lt-name{
-  cursor:pointer;border-radius:6px;transition:background .15s;
-  position:relative;outline:1px dashed var(--bdr);outline-offset:2px
+  cursor:pointer;border-radius:8px;padding:4px 8px;transition:all .15s;
+  background:rgba(45,186,122,.10);box-shadow:inset 0 0 0 1.5px var(--pri);
+  position:relative
 }
-.lt-grid.edit-mode .lt-emoji:hover,.lt-grid.edit-mode .lt-name:hover{
-  background:rgba(45,186,122,.12);outline-color:var(--pri)
+.lt-grid.edit-mode .lt-emoji::after{
+  content:'✏';position:absolute;bottom:-4px;left:-4px;
+  background:var(--pri);color:#fff;font-size:10px;
+  width:16px;height:16px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 1px 4px rgba(0,0,0,.2)
 }
-.lt-grid.edit-mode .lt-name[contenteditable="true"]:focus{
-  outline:2px solid var(--pri);background:var(--bg)
+.lt-grid.edit-mode .lt-emoji:active,.lt-grid.edit-mode .lt-name:active{
+  background:rgba(45,186,122,.25);transform:scale(.96)
+}
+.lt-grid.edit-mode .lt-name[contenteditable="true"]{
+  background:var(--bg);box-shadow:inset 0 0 0 2px var(--pri);outline:none
 }
 /* Drag states */
 .lt-card.dragging{opacity:.35;transform:scale(.96);transition:opacity .1s,transform .1s}
