@@ -143,6 +143,16 @@ a,button,input,select{touch-action:manipulation}
 .lt-grid.edit-mode .lt-del{display:flex;animation:delPop .2s cubic-bezier(.34,1.56,.64,1) both}
 @keyframes delPop{from{transform:scale(0)}to{transform:scale(1)}}
 .lt-grid.edit-mode .lt-card:not(.add-card){cursor:grab;animation:none}
+.lt-grid.edit-mode .lt-emoji,.lt-grid.edit-mode .lt-name{
+  cursor:pointer;border-radius:6px;transition:background .15s;
+  position:relative;outline:1px dashed var(--bdr);outline-offset:2px
+}
+.lt-grid.edit-mode .lt-emoji:hover,.lt-grid.edit-mode .lt-name:hover{
+  background:rgba(45,186,122,.12);outline-color:var(--pri)
+}
+.lt-grid.edit-mode .lt-name[contenteditable="true"]:focus{
+  outline:2px solid var(--pri);background:var(--bg)
+}
 /* Drag states */
 .lt-card.dragging{opacity:.35;transform:scale(.96);transition:opacity .1s,transform .1s}
 .lt-card.drag-over{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri);transform:scale(1.03)}
@@ -653,6 +663,19 @@ a,button,input,select{touch-action:manipulation}
   </div>
 </div>
 
+<!-- Emoji picker overlay for edit-mode -->
+<div class="overlay" id="emojiOverlay">
+  <div class="sheet">
+    <h3>בחר אימוג'י</h3>
+    <div id="emojiGrid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin:12px 0;font-size:26px;text-align:center"></div>
+    <input id="emojiCustom" type="text" maxlength="4" placeholder="או הקלד אימוג'י משלך..." style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:18px;text-align:center;margin-top:6px"/>
+    <div class="sheet-actions">
+      <button class="btn-primary" id="emojiConfirm">אישור</button>
+      <button class="btn-cancel" id="emojiCancel">ביטול</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ ADMIN DASHBOARD (aggregate stats only) ═════════ -->
 <div id="adminPanel" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;overflow-y:auto;padding:20px;font-family:inherit;color:var(--txt)">
   <div style="max-width:760px;margin:0 auto">
@@ -1102,6 +1125,41 @@ function showConfirm(msg,onYes){
   no.onclick=cleanup;
 }
 
+/* ══ EMOJI PICKER ═════════════════════════════════════ */
+const EMOJI_PALETTE=['🛒','🥕','🍞','🥩','🥛','🧀','🍎','🍌','🥑','🍕',
+  '💊','💄','🧴','🩹','🪥','🧼','🧻','🧹','🧺','🫧',
+  '🏠','🛋️','🪑','🔧','🔨','🪛','⚙️','🔌','💡','🔋',
+  '🥐','🍰','🧁','🍪','🍩','☕','🍵','🍷','🍺','🥤',
+  '👕','👖','🧦','👟','🎒','📚','✏️','🎨','🎁','⭐'];
+let _emojiCallback=null;
+function openEmojiPicker(current,onPick){
+  _emojiCallback=onPick;
+  const grid=document.getElementById('emojiGrid');
+  grid.innerHTML=EMOJI_PALETTE.map(e=>
+    '<div data-e="'+e+'" style="padding:6px;cursor:pointer;border-radius:6px;'
+    +(e===current?'background:rgba(45,186,122,.25);':'')+'">'+e+'</div>'
+  ).join('');
+  grid.querySelectorAll('[data-e]').forEach(el=>{
+    el.addEventListener('click',function(){
+      _emojiCallback&&_emojiCallback(this.dataset.e);
+      _emojiCallback=null;
+      document.getElementById('emojiOverlay').classList.remove('open');
+    });
+  });
+  document.getElementById('emojiCustom').value='';
+  document.getElementById('emojiOverlay').classList.add('open');
+}
+document.getElementById('emojiCancel').addEventListener('click',()=>{
+  _emojiCallback=null;
+  document.getElementById('emojiOverlay').classList.remove('open');
+});
+document.getElementById('emojiConfirm').addEventListener('click',()=>{
+  const custom=document.getElementById('emojiCustom').value.trim();
+  if(custom&&_emojiCallback)_emojiCallback(custom);
+  _emojiCallback=null;
+  document.getElementById('emojiOverlay').classList.remove('open');
+});
+
 /* ══ EDIT MODE ════════════════════════ */
 let _editMode=false;
 function setEditMode(on){
@@ -1217,6 +1275,44 @@ function renderHome(){
       +'<div class="lt-name">'+esc(lt.name)+'</div>'
       +'<div class="lt-count">'+pending+' לקנות'+(total?' · '+done+'/'+total:'')+'</div>'
       +'<div class="lt-bar"><div class="lt-fill" style="width:'+pct+'%"></div></div>');
+
+    // Edit-mode: tap emoji to pick a new one, tap name to rename inline
+    if(_editMode){
+      const emojiEl=card.querySelector('.lt-emoji');
+      const nameEl=card.querySelector('.lt-name');
+      emojiEl.title='לחץ לשינוי אימוג\'י';
+      nameEl.title='לחץ לעריכת שם';
+      emojiEl.addEventListener('click',function(e){
+        e.stopPropagation();
+        openEmojiPicker(lt.emoji,newEmoji=>{
+          if(newEmoji&&newEmoji!==lt.emoji){
+            lt.emoji=newEmoji;save();renderHome();
+          }
+        });
+      });
+      nameEl.addEventListener('click',function(e){
+        e.stopPropagation();
+        nameEl.contentEditable='true';
+        nameEl.focus();
+        // select all text inside the editable element
+        const r=document.createRange();r.selectNodeContents(nameEl);
+        const s=window.getSelection();s.removeAllRanges();s.addRange(r);
+      });
+      const finishRename=()=>{
+        nameEl.contentEditable='false';
+        const newName=(nameEl.textContent||'').trim().slice(0,30);
+        if(newName && newName!==lt.name){
+          lt.name=newName;save();renderHome();
+        } else {
+          nameEl.textContent=lt.name; // revert empty/unchanged
+        }
+      };
+      nameEl.addEventListener('blur',finishRename);
+      nameEl.addEventListener('keydown',function(e){
+        if(e.key==='Enter'){e.preventDefault();nameEl.blur();}
+        if(e.key==='Escape'){e.preventDefault();nameEl.textContent=lt.name;nameEl.blur();}
+      });
+    }
 
     // Click opens list only when NOT in edit mode
     card.addEventListener('click',()=>{if(!_editMode)openList(lt.id);});
