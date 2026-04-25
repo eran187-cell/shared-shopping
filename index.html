@@ -808,6 +808,7 @@ async function recordHouseStat(){
     const doneItems=Object.values(items||{}).reduce((n,a)=>n+(a?.filter(x=>x.checked).length||0),0);
     const cleanName=(house.name||'').trim().slice(0,40);
     const payload={
+      c:houseId, // expose code so admin dashboard can manage by row click
       m:(house.members||[]).length,
       i:totalItems,
       d:doneItems,
@@ -2195,18 +2196,20 @@ async function loadAdminStats(){
         const ageColor=ageDays===null?'var(--mut)':ageDays<=1?'var(--pri)':ageDays<=7?'var(--mut)':'#999';
         const hasName=h.n && h.n!=='—' && h.n.trim();
         const displayName=hasName?esc(h.n):'<span style="color:var(--mut);font-style:italic">בית #'+hash.slice(0,6)+'</span>';
+        const code=h.c||'';
+        const codeChip=code?'<code style="font-size:10px;background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--mut);margin-right:4px">'+esc(code)+'</code>':'';
         return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr)">'
           +'<span style="font-size:12px;color:var(--mut);min-width:24px;text-align:center">'+(i+1)+'</span>'
-          +'<span style="font-size:14px;font-weight:600;flex:1">'+displayName+'</span>'
+          +'<span style="font-size:14px;font-weight:600;flex:1;display:flex;align-items:center;gap:4px">'+displayName+codeChip+'</span>'
           +'<span style="font-size:12px;color:var(--mut)">👥 '+(h.m||0)+'</span>'
           +'<span style="font-size:12px;color:var(--mut)">🛒 '+(h.i||0)+'</span>'
           +'<span style="font-size:11px;color:'+ageColor+';min-width:70px;text-align:left">'+ageLabel+'</span>'
-          +'<button data-del-hash="'+hash+'" title="מחק רק מהדשבורד" style="background:transparent;border:1px solid var(--bdr);color:#e74c3c;width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:12px;padding:0">✕</button>'
+          +'<button data-del-hash="'+hash+'" data-del-code="'+esc(code)+'" data-del-name="'+esc(h.n||code||hash.slice(0,6))+'" title="מחק בית לחלוטין" style="background:#e74c3c;border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;padding:0;font-weight:700">🗑</button>'
           +'</div>';
       }).join('');
-      // wire X buttons
+      // wire delete buttons — full house delete if code is known, else stats-only
       listEl.querySelectorAll('[data-del-hash]').forEach(btn=>{
-        btn.addEventListener('click',()=>adminDeleteStatsRow(btn.dataset.delHash));
+        btn.addEventListener('click',()=>adminDeleteRow(btn.dataset.delHash,btn.dataset.delCode,btn.dataset.delName));
       });
     } else {
       listEl.innerHTML='<div style="text-align:center;color:var(--mut);padding:20px">אין עדיין נתוני בתים.</div>';
@@ -2263,13 +2266,28 @@ async function adminDeleteHouseByCode(){
     document.getElementById('adminError').textContent='מחיקה נכשלה: '+(err.message||err.code||err);
   }
 }
-async function adminDeleteStatsRow(hash){
-  if(!confirm('למחוק את רשומת הבית הזו מהדשבורד?\n\nהבית עצמו לא יימחק — רק תיעלם מהסטטיסטיקה. אם הבית עדיין פעיל הוא יחזור להופיע בפעולה הבאה שלו.'))return;
-  try{
-    await db.ref('stats/houses/'+hash).remove();
-    loadAdminStats();
-  }catch(err){
-    document.getElementById('adminError').textContent='מחיקה נכשלה: '+(err.message||err.code||err);
+async function adminDeleteRow(hash,code,name){
+  if(code){
+    // full delete — house data + stats
+    if(!confirm('למחוק לחלוטין את הבית "'+name+'" (קוד '+code+')?\n\nכל הנתונים, החברים והפריטים יימחקו לתמיד. פעולה זו אינה הפיכה.'))return;
+    try{
+      document.getElementById('adminError').textContent='מוחק...';
+      await db.ref('houses/'+code).remove();
+      await db.ref('stats/houses/'+hash).remove();
+      document.getElementById('adminError').textContent='';
+      loadAdminStats();
+    }catch(err){
+      document.getElementById('adminError').textContent='מחיקה נכשלה: '+(err.message||err.code||err);
+    }
+  } else {
+    // legacy row without stored code — can only remove the stats entry
+    if(!confirm('הקוד של הבית הזה לא ידוע (רשומה ישנה). אפשר רק להסיר אותו מהדשבורד — הנתונים הממשיים לא יימחקו. להמשיך?'))return;
+    try{
+      await db.ref('stats/houses/'+hash).remove();
+      loadAdminStats();
+    }catch(err){
+      document.getElementById('adminError').textContent='מחיקה נכשלה: '+(err.message||err.code||err);
+    }
   }
 }
 document.getElementById('adminDelHouseBtn').addEventListener('click',adminDeleteHouseByCode);
