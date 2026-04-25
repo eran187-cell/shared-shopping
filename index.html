@@ -653,29 +653,36 @@ a,button,input,select{touch-action:manipulation}
   </div>
 </div>
 
-<!-- ══ ADMIN DASHBOARD ════════════════════════════════ -->
+<!-- ══ ADMIN DASHBOARD (aggregate stats only) ═════════ -->
 <div id="adminPanel" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;overflow-y:auto;padding:20px;font-family:inherit;color:var(--txt)">
-  <div style="max-width:720px;margin:0 auto">
+  <div style="max-width:760px;margin:0 auto">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
       <span style="font-size:28px">📊</span>
-      <h2 style="margin:0;font-size:22px">דשבורד אדמין</h2>
+      <h2 style="margin:0;font-size:22px">דשבורד — נתונים אגרגטיביים</h2>
       <span id="adminTime" style="margin-right:auto;font-size:12px;color:var(--mut)"></span>
     </div>
 
-    <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
-      <label style="display:block;font-size:13px;color:var(--mut);margin-bottom:8px">קודי בתים לעקוב (אחד בשורה)</label>
-      <textarea id="adminCodes" rows="4" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-family:monospace;font-size:14px;resize:vertical" placeholder="ABC123&#10;XYZ789"></textarea>
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button id="adminRefreshBtn" class="btn-primary" style="flex:1">רענן נתונים</button>
-        <button id="adminBackBtn" class="btn-cancel">חזרה לאפליקציה</button>
-      </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button id="adminRefreshBtn" class="btn-primary" style="flex:1">🔄 רענן</button>
+      <button id="adminBackBtn" class="btn-cancel">חזרה לאפליקציה</button>
     </div>
 
-    <div id="adminSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px"></div>
+    <div id="adminSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px"></div>
 
-    <div id="adminHouses"></div>
+    <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
+      <h3 style="margin:0 0 10px 0;font-size:15px">📅 כניסות יומיות (7 ימים אחרונים)</h3>
+      <div id="adminLoginsChart"></div>
+    </div>
+
+    <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
+      <h3 style="margin:0 0 10px 0;font-size:15px">🔥 20 הפריטים הנפוצים ביותר</h3>
+      <div id="adminTopItems"></div>
+    </div>
 
     <div id="adminError" style="color:#e74c3c;font-size:13px;margin-top:12px"></div>
+    <div style="font-size:11px;color:var(--mut);margin-top:14px;line-height:1.5">
+      🔒 כל הנתונים אנונימיים: קודי בתים מוצפנים (SHA-256), שמות חברים אינם נשמרים, ולפריטים נשמר רק מונה תדירות גלובלי.
+    </div>
   </div>
 </div>
 
@@ -740,6 +747,62 @@ let houseId=localStorage.getItem('sl3_houseId')||null;
 function isAdmin(){return !house.adminId||house.adminId===deviceId;}
 let _fbRef=null, _saving=false;
 
+/* ── Anonymous aggregate stats (no PII / no house-codes exposed) ───────── */
+async function _sha256hex(str){
+  const buf=new TextEncoder().encode(str);
+  const h=await crypto.subtle.digest('SHA-256',buf);
+  return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+let _houseHash=null;
+async function _getHouseHash(){
+  if(_houseHash)return _houseHash;
+  if(!houseId)return null;
+  _houseHash=(await _sha256hex('sl3-salt-'+houseId)).slice(0,16);
+  return _houseHash;
+}
+async function recordHouseStat(){
+  if(!houseId)return;
+  try{
+    const hash=await _getHouseHash();
+    const totalItems=Object.values(items||{}).reduce((n,a)=>n+(a?.length||0),0);
+    const doneItems=Object.values(items||{}).reduce((n,a)=>n+(a?.filter(x=>x.checked).length||0),0);
+    db.ref('stats/houses/'+hash).set({
+      m:(house.members||[]).length,
+      i:totalItems,
+      d:doneItems,
+      l:(listTypes||[]).length,
+      t:Date.now()
+    });
+  }catch(e){console.warn('[stats house]',e);}
+}
+function _safeItemKey(name){
+  // Firebase keys can't contain . # $ [ ] /
+  // base64-encode the UTF-8 bytes and replace URL-unsafe chars
+  try{
+    const bytes=new TextEncoder().encode(name.toLowerCase().trim());
+    let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));
+    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'').slice(0,80);
+  }catch(e){return null;}
+}
+function recordItemStat(name){
+  if(!name||!houseId)return;
+  const key=_safeItemKey(name);
+  if(!key)return;
+  // transaction prevents lost increments under concurrent adds
+  db.ref('stats/itemFreq/'+key).transaction(curr=>{
+    if(!curr)return {n:name.trim(),c:1};
+    return {n:curr.n||name.trim(),c:(curr.c||0)+1};
+  }).catch(()=>{});
+}
+function recordLogin(){
+  if(!houseId)return;
+  try{
+    const day=new Date().toISOString().slice(0,10); // YYYY-MM-DD UTC
+    const dev=deviceId.slice(0,12);
+    db.ref('stats/logins/'+day+'/'+dev).set(Date.now()).catch(()=>{});
+  }catch(e){}
+}
+
 /* ── state ───────────────────────────── */
 let house={name:'',members:[]};
 let listTypes=[], items={}, nextId=1, selMember=null, activeId=null, activeFilter='all', chipsExpanded=false;
@@ -761,7 +824,7 @@ function save(){
   const payload=JSON.parse(JSON.stringify({house,types:listTypes,items,nextId,_s:SESSION,_t:Date.now()}));
   console.log('[save] writing to Firebase, items=',totalItems,'houseId=',houseId);
   db.ref('houses/'+houseId).set(payload)
-    .then(()=>{console.log('[save] OK');setTimeout(()=>{_saving=false;},600);})
+    .then(()=>{console.log('[save] OK');setTimeout(()=>{_saving=false;},600);recordHouseStat();})
     .catch(err=>{console.error('[save] FAILED:',err);_saving=false;toast('שמירה נכשלה: '+(err.message||err.code||'שגיאה'));});
 }
 function applyData(d){
@@ -800,6 +863,7 @@ function connectToHouse(id,cb,errCb){
     houseId=id;
     localStorage.setItem('sl3_houseId',id);
     startListener(id);
+    recordLogin();
     if(cb)cb(!!d);
   },err=>{
     if(errCb)errCb(err);
@@ -1350,6 +1414,7 @@ function submitItem(){
   if(noteVal)item.note=noteVal; // only set note if non-empty (Firebase rejects undefined)
   if(!items[activeId])items[activeId]=[];
   items[activeId].push(item);save();
+  recordItemStat(name);
 
   // Make sure the new (unchecked) item will be visible under the current filter.
   // If user is on "done", switch to "pending" so they see what they just added.
@@ -1875,7 +1940,7 @@ const _deeplink=new URLSearchParams(location.search).get('h')||null;
 // clean URL immediately so refresh doesn't re-trigger
 if(_deeplink) history.replaceState(null,'',location.pathname);
 
-/* ══ ADMIN DASHBOARD ════════════════════════════════ */
+/* ══ ADMIN DASHBOARD — aggregate stats only ═════════ */
 const _isAdmin=new URLSearchParams(location.search).has('admin');
 function showAdmin(){
   hideSplash();
@@ -1883,100 +1948,99 @@ function showAdmin(){
   document.getElementById('setup').classList.add('slide-right');
   document.getElementById('onboardOverlay').style.display='none';
   document.getElementById('adminPanel').style.display='block';
-  // pre-fill known codes: from localStorage list, or current house
-  const saved=localStorage.getItem('sl3_adminCodes');
-  let codes=saved||(houseId||'');
-  document.getElementById('adminCodes').value=codes;
-  if(codes.trim())loadAdminStats();
+  loadAdminStats();
 }
 function fmtBytes(n){
   if(n<1024)return n+' B';
   if(n<1024*1024)return (n/1024).toFixed(1)+' KB';
   return (n/1024/1024).toFixed(2)+' MB';
 }
-function fmtTime(ts){
-  if(!ts)return '—';
-  const diff=Date.now()-ts;
-  if(diff<60000)return 'לפני רגע';
-  if(diff<3600000)return 'לפני '+Math.floor(diff/60000)+' דק׳';
-  if(diff<86400000)return 'לפני '+Math.floor(diff/3600000)+' שע׳';
-  return 'לפני '+Math.floor(diff/86400000)+' ימים';
-}
 async function loadAdminStats(){
-  const raw=document.getElementById('adminCodes').value.trim();
-  const codes=[...new Set(raw.split(/[\s,]+/).map(s=>s.trim().toUpperCase()).filter(s=>s.length>=4&&s.length<=12))];
-  localStorage.setItem('sl3_adminCodes',codes.join('\n'));
-  document.getElementById('adminCodes').value=codes.join('\n');
   document.getElementById('adminError').textContent='';
-  document.getElementById('adminTime').textContent='בודק...';
-  if(!codes.length){
-    document.getElementById('adminSummary').innerHTML='';
-    document.getElementById('adminHouses').innerHTML='<div style="text-align:center;color:var(--mut);padding:40px">הזן קוד בית אחד או יותר ולחץ "רענן"</div>';
-    document.getElementById('adminTime').textContent='';
-    return;
-  }
-  const FREE_QUOTA=1024*1024*1024; // 1 GB
-  let totalFamilies=0,totalUsers=0,totalItems=0,totalDone=0,totalBytes=0,totalLists=0;
-  const houses=[];
-  for(const code of codes){
-    try{
-      const snap=await db.ref('houses/'+code).once('value');
-      const d=snap.val();
-      if(!d){houses.push({code,exists:false});continue;}
-      const json=JSON.stringify(d);
-      const bytes=new Blob([json]).size;
-      const memberCount=(d.house?.members||[]).length;
-      const lists=d.types||[];
-      let itemCount=0,doneCount=0;
-      lists.forEach(lt=>{
-        const arr=(d.items||{})[lt.id]||[];
-        itemCount+=arr.length;
-        doneCount+=arr.filter(x=>x.checked).length;
-      });
+  document.getElementById('adminTime').textContent='טוען...';
+  try{
+    const snap=await db.ref('stats').once('value');
+    const s=snap.val()||{};
+    const houses=s.houses||{};
+    const itemFreq=s.itemFreq||{};
+    const logins=s.logins||{};
+
+    // ── aggregate totals
+    let totalFamilies=0,totalUsers=0,totalItems=0,totalDone=0,totalLists=0,latestUpdate=0;
+    Object.values(houses).forEach(h=>{
       totalFamilies++;
-      totalUsers+=memberCount;
-      totalItems+=itemCount;
-      totalDone+=doneCount;
-      totalBytes+=bytes;
-      totalLists+=lists.length;
-      houses.push({code,exists:true,name:d.house?.name||'(ללא שם)',
-        members:memberCount,lists:lists.length,items:itemCount,done:doneCount,
-        bytes,lastUpdate:d._t||0,memberNames:(d.house?.members||[]).map(m=>m.name)});
-    }catch(err){
-      houses.push({code,exists:false,error:err.message||err.code||'שגיאה'});
+      totalUsers+=(h.m||0);
+      totalItems+=(h.i||0);
+      totalDone+=(h.d||0);
+      totalLists+=(h.l||0);
+      if((h.t||0)>latestUpdate)latestUpdate=h.t;
+    });
+
+    // ── today's logins
+    const today=new Date().toISOString().slice(0,10);
+    const todayLogins=Object.keys(logins[today]||{}).length;
+
+    // ── 7-day chart data
+    const days=[];
+    for(let i=6;i>=0;i--){
+      const d=new Date();d.setUTCDate(d.getUTCDate()-i);
+      const key=d.toISOString().slice(0,10);
+      days.push({key,label:key.slice(5),count:Object.keys(logins[key]||{}).length});
     }
-  }
-  // Summary tiles
-  const pct=(totalBytes/FREE_QUOTA*100);
-  document.getElementById('adminSummary').innerHTML=[
-    ['👨‍👩‍👧',totalFamilies,'משפחות'],
-    ['👥',totalUsers,'משתמשים'],
-    ['🛒',totalItems,'פריטים'],
-    ['✅',totalDone+'/'+totalItems,'הושלמו'],
-    ['📋',totalLists,'רשימות'],
-    ['💾',fmtBytes(totalBytes),pct.toFixed(3)+'% מכ-1 GB']
-  ].map(([icon,val,label])=>
-    '<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;text-align:center">'
-    +'<div style="font-size:24px;margin-bottom:4px">'+icon+'</div>'
-    +'<div style="font-size:22px;font-weight:700;color:var(--pri)">'+val+'</div>'
-    +'<div style="font-size:11px;color:var(--mut);margin-top:2px">'+label+'</div>'
-    +'</div>'
-  ).join('');
-  // House table
-  document.getElementById('adminHouses').innerHTML=houses.map(h=>{
-    if(!h.exists)return '<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;opacity:.6"><strong>'+esc(h.code)+'</strong> <span style="color:#e74c3c;font-size:12px">— '+esc(h.error||'לא נמצא')+'</span></div>';
-    return '<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:14px;margin-bottom:10px">'
-      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><strong style="font-size:15px">'+esc(h.name)+'</strong><code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--mut)">'+esc(h.code)+'</code><span style="margin-right:auto;font-size:11px;color:var(--mut)">'+fmtTime(h.lastUpdate)+'</span></div>'
-      +'<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mut)">'
-      +'<span>👥 '+h.members+' חברים</span>'
-      +'<span>📋 '+h.lists+' רשימות</span>'
-      +'<span>🛒 '+h.items+' פריטים ('+h.done+' בסל)</span>'
-      +'<span>💾 '+fmtBytes(h.bytes)+'</span>'
+    const maxLogins=Math.max(1,...days.map(d=>d.count));
+
+    // ── summary tiles
+    document.getElementById('adminSummary').innerHTML=[
+      ['👨‍👩‍👧',totalFamilies,'בתים'],
+      ['👥',totalUsers,'משתמשים'],
+      ['🛒',totalItems,'פריטים פעילים'],
+      ['✅',totalDone,'הושלמו'],
+      ['📅',todayLogins,'כניסות היום'],
+      ['📋',totalLists,'רשימות']
+    ].map(([icon,val,label])=>
+      '<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;text-align:center">'
+      +'<div style="font-size:24px;margin-bottom:4px">'+icon+'</div>'
+      +'<div style="font-size:22px;font-weight:700;color:var(--pri)">'+val+'</div>'
+      +'<div style="font-size:11px;color:var(--mut);margin-top:2px">'+label+'</div>'
       +'</div>'
-      +(h.memberNames.length?'<div style="font-size:12px;color:var(--mut);margin-top:6px">'+h.memberNames.map(esc).join(' · ')+'</div>':'')
+    ).join('');
+
+    // ── 7-day login chart (CSS bars)
+    document.getElementById('adminLoginsChart').innerHTML=
+      '<div style="display:flex;align-items:flex-end;gap:6px;height:120px;padding:4px 0">'
+      +days.map(d=>{
+        const h=Math.round((d.count/maxLogins)*100);
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'
+          +'<div style="font-size:11px;color:var(--mut);font-weight:700">'+d.count+'</div>'
+          +'<div style="width:100%;height:'+h+'%;min-height:2px;background:var(--pri);border-radius:4px 4px 0 0;transition:height .3s"></div>'
+          +'<div style="font-size:10px;color:var(--mut);writing-mode:horizontal-tb">'+d.label+'</div>'
+          +'</div>';
+      }).join('')
       +'</div>';
-  }).join('');
-  document.getElementById('adminTime').textContent='עודכן '+new Date().toLocaleTimeString('he-IL');
+
+    // ── top 20 items (decode names from itemFreq values)
+    const items=Object.values(itemFreq).filter(x=>x&&x.n&&x.c).sort((a,b)=>b.c-a.c).slice(0,20);
+    if(items.length){
+      const maxC=items[0].c;
+      document.getElementById('adminTopItems').innerHTML=items.map((it,i)=>{
+        const pct=Math.round((it.c/maxC)*100);
+        return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bdr)">'
+          +'<span style="font-size:13px;color:var(--mut);min-width:24px;text-align:center">'+(i+1)+'</span>'
+          +'<span style="font-size:14px;flex:1">'+esc(it.n)+'</span>'
+          +'<div style="flex:2;height:8px;background:var(--bdr);border-radius:4px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:var(--pri)"></div></div>'
+          +'<span style="font-size:13px;font-weight:700;color:var(--pri);min-width:36px;text-align:left">'+it.c+'</span>'
+          +'</div>';
+      }).join('');
+    } else {
+      document.getElementById('adminTopItems').innerHTML='<div style="text-align:center;color:var(--mut);padding:20px">אין עדיין נתוני פריטים. הוסף כמה פריטים באפליקציה כדי שיתחילו להיאסף.</div>';
+    }
+
+    document.getElementById('adminTime').textContent='עודכן '+new Date().toLocaleTimeString('he-IL');
+  }catch(err){
+    console.error(err);
+    document.getElementById('adminError').textContent='שגיאה בטעינה: '+(err.message||err.code||err);
+    document.getElementById('adminTime').textContent='';
+  }
 }
 document.getElementById('adminRefreshBtn').addEventListener('click',loadAdminStats);
 document.getElementById('adminBackBtn').addEventListener('click',()=>{location.href=location.pathname;});
