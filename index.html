@@ -675,6 +675,11 @@ a,button,input,select{touch-action:manipulation}
     </div>
 
     <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
+      <h3 style="margin:0 0 10px 0;font-size:15px">🏠 רשימת בתים</h3>
+      <div id="adminHouseList"></div>
+    </div>
+
+    <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
       <h3 style="margin:0 0 10px 0;font-size:15px">🔥 20 הפריטים הנפוצים ביותר</h3>
       <div id="adminTopItems"></div>
     </div>
@@ -767,6 +772,7 @@ async function recordHouseStat(){
     const totalItems=Object.values(items||{}).reduce((n,a)=>n+(a?.length||0),0);
     const doneItems=Object.values(items||{}).reduce((n,a)=>n+(a?.filter(x=>x.checked).length||0),0);
     const payload={
+      n:(house.name||'').trim().slice(0,40)||'—',
       m:(house.members||[]).length,
       i:totalItems,
       d:doneItems,
@@ -2034,6 +2040,25 @@ async function loadAdminStats(){
           +'</div>';
       }).join('')
       +'</div>';
+
+    // ── house list (sorted by activity: items desc, then last update desc)
+    const housesArr=Object.values(houses).sort((a,b)=>(b.i||0)-(a.i||0)||(b.t||0)-(a.t||0));
+    if(housesArr.length){
+      document.getElementById('adminHouseList').innerHTML=housesArr.map((h,i)=>{
+        const ageDays=h.t?Math.floor((Date.now()-h.t)/86400000):null;
+        const ageLabel=ageDays===null?'—':ageDays===0?'פעיל היום':ageDays===1?'אתמול':'לפני '+ageDays+' ימים';
+        const ageColor=ageDays===null?'var(--mut)':ageDays<=1?'var(--pri)':ageDays<=7?'var(--mut)':'#999';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr)">'
+          +'<span style="font-size:12px;color:var(--mut);min-width:24px;text-align:center">'+(i+1)+'</span>'
+          +'<span style="font-size:14px;font-weight:600;flex:1">'+esc(h.n||'—')+'</span>'
+          +'<span style="font-size:12px;color:var(--mut)">👥 '+(h.m||0)+'</span>'
+          +'<span style="font-size:12px;color:var(--mut)">🛒 '+(h.i||0)+'</span>'
+          +'<span style="font-size:11px;color:'+ageColor+';min-width:80px;text-align:left">'+ageLabel+'</span>'
+          +'</div>';
+      }).join('');
+    } else {
+      document.getElementById('adminHouseList').innerHTML='<div style="text-align:center;color:var(--mut);padding:20px">אין עדיין נתוני בתים.</div>';
+    }
 
     // ── top 20 items (decode names from itemFreq values)
     const items=Object.values(itemFreq).filter(x=>x&&x.n&&x.c).sort((a,b)=>b.c-a.c).slice(0,20);
