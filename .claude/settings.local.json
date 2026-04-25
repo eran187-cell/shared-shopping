@@ -18,7 +18,12 @@
       "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('index.html','utf8'\\);try{eval\\(html.match\\(/<script>\\([\\\\s\\\\S]*\\)<\\\\/script>/\\)[1]\\)}catch\\(e\\){console.log\\('JS ERROR:',e.message\\)}\")",
       "Bash(curl -s \"https://api.github.com/users/eran187-cell/repos?per_page=20\")",
       "Bash(curl -s \"https://eran187-cell.github.io/shared-shopping/sw.js\")",
-      "Bash(curl -s \"https://eran187-cell.github.io/shared-shopping/index.html\")"
+      "Bash(curl -s \"https://eran187-cell.github.io/shared-shopping/index.html\")",
+      "Bash(git tag -a checkpoint-1 -m 'נקודת ציון 1 — גרסה עובדת *)",
+      "Bash(git push *)",
+      "Bash(git tag *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
