@@ -2014,12 +2014,30 @@ function showInstallFlow(){
     _installPrompt.prompt();
     _installPrompt.userChoice.then(()=>{_installPrompt=null;_refreshInstallBtns();});
   } else if(_isIOS){
-    // iOS Safari — manual instructions
-    const steps=[
-      {n:'1',text:'לחץ על כפתור השיתוף <strong>📤</strong> בתחתית Safari'},
-      {n:'2',text:'גלול ברשימה ובחר <strong>"הוסף למסך הבית"</strong>'},
-      {n:'3',text:'לחץ <strong>"הוסף"</strong> בפינה הימנית למעלה'},
-    ];
+    const ua=navigator.userAgent;
+    const isIOSChrome=/CriOS/.test(ua);
+    const isIOSFirefox=/FxiOS/.test(ua);
+    const isIOSEdge=/EdgiOS/.test(ua);
+    const isOtherBrowser=isIOSChrome||isIOSFirefox||isIOSEdge;
+    let steps;
+    if(isOtherBrowser){
+      // iOS browsers other than Safari can't install PWAs — direct user to Safari
+      const browserName=isIOSChrome?'Chrome':isIOSFirefox?'Firefox':'Edge';
+      steps=[
+        {n:'⚠',text:'באייפון, התקנה אפשרית <strong>רק דרך Safari</strong> (ולא דרך '+browserName+').'},
+        {n:'1',text:'העתק את הקישור: <code style="background:var(--bg);padding:2px 6px;border-radius:4px;font-size:12px">'+location.origin+location.pathname+'</code>'},
+        {n:'2',text:'פתח את <strong>Safari</strong> והדבק את הקישור.'},
+        {n:'3',text:'בתוך Safari לחץ על כפתור השיתוף <strong>📤</strong> בתחתית.'},
+        {n:'4',text:'בחר <strong>"הוסף למסך הבית"</strong> ואשר.'},
+      ];
+    } else {
+      // iOS Safari — manual instructions
+      steps=[
+        {n:'1',text:'לחץ על כפתור השיתוף <strong>📤</strong> בתחתית Safari'},
+        {n:'2',text:'גלול ברשימה ובחר <strong>"הוסף למסך הבית"</strong>'},
+        {n:'3',text:'לחץ <strong>"הוסף"</strong> בפינה הימנית למעלה'},
+      ];
+    }
     document.getElementById('installSteps').innerHTML=steps.map(s=>
       '<div class="install-step"><div class="install-step-num">'+s.n+'</div><div>'+s.text+'</div></div>'
     ).join('');
