@@ -876,9 +876,10 @@ function save(){
 }
 function applyData(d){
   if(!d)return;
-  house=d.house||{name:'',members:[]};
-  listTypes=d.types||DEFAULT_TYPES.map(x=>({...x}));
-  items=d.items||{};
+  const h=d.house||{};
+  house={name:h.name||'',members:Array.isArray(h.members)?h.members:[],adminId:h.adminId};
+  listTypes=Array.isArray(d.types)&&d.types.length?d.types:DEFAULT_TYPES.map(x=>({...x}));
+  items=(d.items&&typeof d.items==='object')?d.items:{};
   nextId=d.nextId||1;
   listTypes.forEach(lt=>{if(!items[lt.id])items[lt.id]=[];});
 }
@@ -1245,9 +1246,13 @@ let _ddSrc=-1;
 
 /* ══ RENDER HOME ══════════════════════ */
 function renderHome(){
-  document.getElementById('houseNameEl').textContent=house.name||'הבית שלנו';
+  document.getElementById('houseNameEl').textContent=(house&&house.name)||'הבית שלנו';
+  const members=Array.isArray(house&&house.members)?house.members:[];
   document.getElementById('membersEl').innerHTML=
-    house.members.map(m=>'<div class="av" style="background:'+m.color+';margin-right:-8px" title="'+esc(m.name)+'">'+initials(m.name)+'</div>').join('');
+    members.map(m=>'<div class="av" style="background:'+m.color+';margin-right:-8px" title="'+esc(m.name)+'">'+initials(m.name)+'</div>').join('');
+  // Ensure listTypes is always usable — avoids blank home if remote data was malformed
+  if(!Array.isArray(listTypes)||!listTypes.length)listTypes=DEFAULT_TYPES.map(x=>({...x}));
+  if(!items||typeof items!=='object')items={};
 
   const grid=document.getElementById('ltGrid');
   grid.innerHTML='';
@@ -2064,6 +2069,24 @@ function hideSplash(){
 }
 // Maximum splash time — always hide after 3 s even if Firebase is slow
 setTimeout(hideSplash,3000);
+
+/* ══ Global error handler — surface silent crashes ═════════ */
+window.addEventListener('error',function(ev){
+  try{
+    hideSplash();
+    const msg=(ev.message||'unknown')+(ev.filename?' @ '+ev.filename.split('/').pop()+':'+ev.lineno:'');
+    let bar=document.getElementById('jsErrBar');
+    if(!bar){
+      bar=document.createElement('div');bar.id='jsErrBar';
+      bar.style.cssText='position:fixed;top:0;left:0;right:0;background:#e74c3c;color:#fff;padding:8px 12px;font-size:12px;font-family:monospace;z-index:99999;direction:ltr;text-align:left;line-height:1.4;max-height:30vh;overflow-y:auto;white-space:pre-wrap';
+      document.body.appendChild(bar);
+    }
+    bar.textContent='⚠ JS error: '+msg+'\n(refresh app: Ctrl+Shift+R or close & reopen)';
+  }catch(_){}
+});
+window.addEventListener('unhandledrejection',function(ev){
+  console.error('[unhandled rejection]',ev.reason);
+});
 
 /* ══ BOOT ════════════════════════════════════ */
 buildColorPicker();
