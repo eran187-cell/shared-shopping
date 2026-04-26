@@ -117,13 +117,16 @@ a,button,input,select{touch-action:manipulation}
 .mem-name-inp:focus{border-color:var(--pri)}
 .mem-del{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:6px;border:none;background:transparent;color:var(--mut);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
 .mem-del:hover{background:#fdecea;color:var(--red)}
-.mem-admin-badge{position:absolute;left:34px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:6px;border:none;background:transparent;color:var(--bdr);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;filter:grayscale(1) opacity(.45)}
-.mem-admin-badge.on{filter:none;color:#f5a623}
+.mem-admin-badge{position:absolute;left:34px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:6px;border:none;background:transparent;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;filter:grayscale(1) opacity(.35)}
+.mem-admin-badge.on{filter:none}
 .mem-admin-badge:disabled{cursor:default}
-.mem-admin-badge:not(:disabled):hover{background:rgba(245,166,35,.12)}
+.mem-admin-badge:not(:disabled):hover{background:rgba(245,166,35,.12);transform:translateY(-50%) scale(1.1)}
 /* When admin badge is present but no delete (non-admin self), align it right */
 .mem-inp-wrap:not(:has(.mem-del)) .mem-admin-badge{left:4px}
+/* Home-view admin marker — small crown overlay on the avatar */
+.av{position:relative}
 .av.is-admin{box-shadow:0 0 0 2px #f5a623}
+.av.is-admin::after{content:'👑';position:absolute;top:-8px;right:-4px;font-size:11px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
 
 .add-member-btn{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:1.5px dashed var(--bdr);background:transparent;color:var(--mut);font-size:14px;cursor:pointer;width:100%;transition:all .15s;font-family:inherit}
 .add-member-btn:hover{border-color:var(--pri);color:var(--pri);background:var(--pril)}
@@ -1138,11 +1141,11 @@ function renderMemberList(){
     });
     wrap.appendChild(inp);
 
-    // ⭐ admin badge — visible to everyone, tappable only for admins
+    // 👑 admin badge — visible to everyone, tappable only for admins
     const badge=document.createElement('button');
     badge.className='mem-admin-badge'+(m.isAdmin?' on':'');
-    badge.textContent='⭐';
-    badge.title=m.isAdmin?(admin?'בטל מנהל':'מנהל'):(admin?'הפוך למנהל':'אינו מנהל');
+    badge.textContent='👑';
+    badge.title=m.isAdmin?(admin?'בטל הרשאת מנהל':'מנהל'):(admin?'הפוך למנהל':'אינו מנהל');
     badge.disabled=!admin;
     if(admin){
       badge.addEventListener('click',()=>{
