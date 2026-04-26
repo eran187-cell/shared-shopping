@@ -1,4 +1,4 @@
-const CACHE='sl-v57';
+const CACHE='sl-v58';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(clients.claim()));
 self.addEventListener('fetch',e=>{
