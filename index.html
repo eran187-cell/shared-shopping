@@ -1154,7 +1154,7 @@ function renderMemberList(){
         commitSettings();
         renderMemberList();
         toast('נקשרת ל-"'+nm+'"');
-      });
+      },{yesLabel:'שיוך',yesColor:'#2dba7a'});
     };
     if(claimable){
       av.title='זה אני';
@@ -1362,13 +1362,16 @@ document.getElementById('leaveHouseBtn').addEventListener('click',function(){
 
 /* ══ HOME VIEW ═══════════════════════════════ */
 /* ══ CONFIRM MODAL ═══════════════════ */
-function showConfirm(msg,onYes){
+function showConfirm(msg,onYes,opts){
   const modal=document.getElementById('confirmModal');
   document.getElementById('confirmMsg').textContent=msg;
   modal.classList.add('open');
-  function cleanup(){modal.classList.remove('open');yes.onclick=no.onclick=null;}
   const yes=document.getElementById('confirmYes');
   const no=document.getElementById('confirmNo');
+  yes.textContent=(opts&&opts.yesLabel)||'מחיקה';
+  no.textContent=(opts&&opts.noLabel)||'ביטול';
+  yes.style.background=(opts&&opts.yesColor)||'#e74c3c';
+  function cleanup(){modal.classList.remove('open');yes.onclick=no.onclick=null;}
   yes.onclick=()=>{cleanup();onYes();};
   no.onclick=cleanup;
 }
