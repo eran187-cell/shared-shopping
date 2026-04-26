@@ -10,7 +10,41 @@
 <link rel="apple-touch-icon" href="icon.svg"/>
 <meta name="apple-mobile-web-app-title" content="Shared Shopping"/>
 <meta name="theme-color" content="#2dba7a"/>
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');</script>
+<script>
+// Service worker registration (catches its own errors)
+if('serviceWorker' in navigator){
+  try{navigator.serviceWorker.register('./sw.js').catch(()=>{});}catch(_){}
+}
+// Hard safety net: ALWAYS hide the splash after 6 seconds, no matter what.
+// Runs even if the main bundle fails to load — protects against in-app
+// browsers (WhatsApp/Instagram) where Firebase or other deps may hang.
+window.addEventListener('load',function(){
+  setTimeout(function(){
+    var s=document.getElementById('splash');
+    if(s&&!s.classList.contains('hide')){
+      s.style.transition='opacity .4s ease';
+      s.style.opacity='0';
+      setTimeout(function(){if(s&&s.parentNode)s.parentNode.removeChild(s);},450);
+      // If Firebase or our main script never initialized, show a hint
+      if(typeof firebase==='undefined'){
+        var b=document.createElement('div');
+        b.style.cssText='position:fixed;top:0;left:0;right:0;background:#e74c3c;color:#fff;padding:14px;font-size:13px;text-align:center;z-index:99999;font-family:sans-serif;line-height:1.5';
+        b.innerHTML='⚠ הטעינה נכשלה. אם פתחת מתוך וואטסאפ/אינסטגרם — לחץ "פתיחה ב-Safari" או העתק את הקישור: <code style="display:block;background:rgba(0,0,0,.2);padding:4px;margin-top:6px;font-size:11px;direction:ltr">'+location.href+'</code>';
+        document.body.appendChild(b);
+      }
+    }
+  },6000);
+});
+// Also catch syntax / load errors in main bundle and show them visibly
+window.addEventListener('error',function(ev){
+  var existing=document.getElementById('jsErrBar');
+  if(existing)return;
+  var bar=document.createElement('div');bar.id='jsErrBar';
+  bar.style.cssText='position:fixed;top:0;left:0;right:0;background:#e74c3c;color:#fff;padding:8px 12px;font-size:11px;font-family:monospace;z-index:99999;direction:ltr;text-align:left;line-height:1.4;max-height:30vh;overflow-y:auto;white-space:pre-wrap';
+  bar.textContent='⚠ JS error: '+(ev.message||'?')+(ev.filename?' @ '+(ev.filename+'').split('/').pop()+':'+ev.lineno:'');
+  if(document.body)document.body.appendChild(bar);
+});
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
