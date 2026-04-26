@@ -1616,7 +1616,12 @@ function openList(id){
   document.getElementById('home').classList.add('hidden');
   document.getElementById('list').classList.remove('slide-right');
   document.getElementById('qabar').classList.add('visible');
-  document.getElementById('qaInput').focus();
+  // NOTE: deliberately NOT focusing qaInput on entry — opening the keyboard
+  // automatically hides the list and feels intrusive. User taps the input
+  // when they want to add.
+  // also scroll list to top so the user sees items from the start
+  const wrap=document.getElementById('itemsWrap');
+  if(wrap)wrap.scrollTop=0;
 }
 
 function goHome(){
