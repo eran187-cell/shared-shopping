@@ -2016,7 +2016,11 @@ document.getElementById('shareBtn').addEventListener('click',async function(){
     },2500);
   };
   if(navigator.share){
-    navigator.share({title:'הצטרפות לבית '+(house.name||''),text:message,url}).catch(()=>{});ok();
+    // Send the full message as `text` only (no separate `url` field).
+    // Receiving apps (WhatsApp) drop `text` when `url` is present, which
+    // would lose our marketing intro. Embedding the URL inside `text`
+    // keeps the intro and still renders a tappable link preview.
+    navigator.share({title:'הצטרפות לבית '+(house.name||''),text:message}).catch(()=>{});ok();
   } else {
     navigator.clipboard.writeText(message).then(ok).catch(()=>{prompt('לינק הצטרפות:',message);ok();});
   }
