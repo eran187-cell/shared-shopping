@@ -2051,7 +2051,30 @@ function showInstallFlow(){
     // Android/Chrome — native prompt
     _installPrompt.prompt();
     _installPrompt.userChoice.then(()=>{_installPrompt=null;_refreshInstallBtns();});
-  } else if(_isIOS){
+    return;
+  }
+  const ua=navigator.userAgent;
+  const isAndroid=/Android/i.test(ua);
+  if(isAndroid){
+    // Native prompt unavailable (Samsung Internet, dismissed before, or in-app browser)
+    const isSamsung=/SamsungBrowser/i.test(ua);
+    const isFirefox=/Firefox/i.test(ua);
+    const isChrome=/Chrome/i.test(ua)&&!isSamsung;
+    const browserName=isSamsung?'Samsung Internet':isFirefox?'Firefox':isChrome?'Chrome':'הדפדפן';
+    const menuLabel=isSamsung?'הוסף דף ל-':'התקן את האפליקציה / הוסף למסך הבית';
+    const steps=[
+      {n:'1',text:'לחץ על תפריט שלוש הנקודות <strong>⋮</strong> בפינה הימנית למעלה של '+browserName+'.'},
+      {n:'2',text:'בחר <strong>"'+menuLabel+'"</strong> '+(isSamsung?'<strong>"מסך הבית"</strong>.':'(לפעמים מופיע כ"התקן" / "Install app").')},
+      {n:'3',text:'אשר את ההתקנה.'},
+      {n:'ℹ',text:'אם לא רואה את האפשרות — סגור ופתח את הדפדפן, או נסה <strong>Chrome</strong> שתומך הכי טוב.'},
+    ];
+    document.getElementById('installSteps').innerHTML=steps.map(s=>
+      '<div class="install-step"><div class="install-step-num">'+s.n+'</div><div>'+s.text+'</div></div>'
+    ).join('');
+    document.getElementById('installOverlay').classList.add('open');
+    return;
+  }
+  if(_isIOS){
     const ua=navigator.userAgent;
     const isIOSChrome=/CriOS/.test(ua);
     const isIOSFirefox=/FxiOS/.test(ua);
