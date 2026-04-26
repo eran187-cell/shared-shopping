@@ -2001,28 +2001,30 @@ async function shortenUrl(longUrl){
 document.getElementById('shareBtn').addEventListener('click',async function(){
   if(!houseId)return;
   const longUrl=location.href.split('?')[0].split('#')[0]+'?h='+houseId;
-  // show "מקצר..." while waiting for the shortener
   const origHTML=this.innerHTML;
   this.innerHTML='<span class="share-icon">⏳</span> מקצר קישור...';
   const url=await shortenUrl(longUrl);
   const message='פתחתי את אפליקציית הקניות המשותפות לבית, מוזמנים להצטרף מהקישור הבא:\n'+url;
-  const ok=()=>{
-    this.innerHTML='<span class="share-icon">✓</span> הלינק הועתק!';
+  const done=(label)=>{
+    this.innerHTML='<span class="share-icon">✓</span> '+label;
     this.classList.add('copy-ok');
     clearTimeout(shareTimer);
     shareTimer=setTimeout(()=>{
       this.innerHTML=origHTML;
       this.classList.remove('copy-ok');
-    },2500);
+    },2800);
   };
-  if(navigator.share){
-    // Send the full message as `text` only (no separate `url` field).
-    // Receiving apps (WhatsApp) drop `text` when `url` is present, which
-    // would lose our marketing intro. Embedding the URL inside `text`
-    // keeps the intro and still renders a tappable link preview.
-    navigator.share({title:'הצטרפות לבית '+(house.name||''),text:message}).catch(()=>{});ok();
-  } else {
-    navigator.clipboard.writeText(message).then(ok).catch(()=>{prompt('לינק הצטרפות:',message);ok();});
+  // Always copy to clipboard — predictable across platforms. native
+  // navigator.share on Android+WhatsApp duplicated the URL because
+  // Chrome auto-extracts a url alongside the text we provided.
+  try{
+    await navigator.clipboard.writeText(message);
+    done('הועתק! הדבק בוואטסאפ');
+    toast('ההודעה הועתקה ללוח — הדבק בוואטסאפ או בכל אפליקציה שתבחר');
+  }catch(_){
+    // older browser without clipboard API — show prompt as last resort
+    prompt('העתק והדבק את ההודעה הבאה:',message);
+    done('הועתק!');
   }
 });
 
