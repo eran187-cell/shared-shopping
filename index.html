@@ -731,6 +731,38 @@ a,button,input,select{touch-action:manipulation}
   </div>
 </div>
 
+<!-- Edit existing item overlay -->
+<div class="overlay" id="editItemOverlay">
+  <div class="sheet">
+    <h3>עריכת פריט</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;margin:12px 0">
+      <label style="font-size:12px;color:var(--mut)">שם הפריט</label>
+      <input id="editItemName" type="text" maxlength="60" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:15px"/>
+
+      <div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label style="font-size:12px;color:var(--mut)">כמות</label>
+          <input id="editItemQty" type="number" min="1" step="1" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:15px;text-align:center"/>
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;color:var(--mut)">יחידה</label>
+          <input id="editItemUnit" type="text" maxlength="10" placeholder="יח׳, ק&quot;ג, ליטר..." style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:15px"/>
+        </div>
+      </div>
+
+      <label style="font-size:12px;color:var(--mut)">הערה (אופציונלי)</label>
+      <input id="editItemNote" type="text" maxlength="120" placeholder="לדוגמה: חלב סויה" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:14px"/>
+
+      <label style="font-size:12px;color:var(--mut)">משויך ל...</label>
+      <div id="editItemMembers" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-primary" id="editItemSave">שמור</button>
+      <button class="btn-cancel" id="editItemCancel">ביטול</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ ADMIN DASHBOARD (aggregate stats only) ═════════ -->
 <div id="adminPanel" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;overflow-y:auto;padding:20px;font-family:inherit;color:var(--txt)">
   <div style="max-width:760px;margin:0 auto">
@@ -1644,6 +1676,12 @@ function buildCard(item){
 
   const info=document.createElement('div');
   info.className='iinfo';
+  info.style.cursor='pointer';
+  info.title='לחץ לעריכה';
+  info.addEventListener('click',function(e){
+    e.stopPropagation();
+    openItemEditor(item.id);
+  });
   const whoHtml=m?'<span class="who-badge" style="background:'+m.color+'">'+esc(m.name)+'</span>':'';
   const noteHtml=item.note?'<div class="item-note">'+esc(item.note)+'</div>':'';
   info.innerHTML='<div class="iname">'+esc(item.name)+'</div>'
@@ -1810,6 +1848,65 @@ function toggleCheck(card){
     },400);
   }
 }
+
+/* ── Edit existing item ────────────────── */
+let _editingItemId=null;
+function openItemEditor(itemId){
+  const list=activeList();
+  const item=list.find(i=>i.id===itemId);
+  if(!item)return;
+  _editingItemId=itemId;
+  document.getElementById('editItemName').value=item.name||'';
+  document.getElementById('editItemQty').value=item.qty||1;
+  document.getElementById('editItemUnit').value=item.unit||"יח'";
+  document.getElementById('editItemNote').value=item.note||'';
+  // Build assignee chips: "ללא" + each member, current selection highlighted
+  const wrap=document.getElementById('editItemMembers');
+  const opts=[{id:null,name:'ללא',color:'#999'},...((house.members)||[])];
+  wrap.innerHTML=opts.map(m=>{
+    const sel=(item.assignee||null)===(m.id||null);
+    return '<button type="button" data-mid="'+(m.id||'')+'" '
+      +'style="padding:6px 12px;border-radius:99px;border:1.5px solid '+(sel?m.color:'var(--bdr)')
+      +';background:'+(sel?m.color:'transparent')+';color:'+(sel?'#fff':'var(--txt)')
+      +';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">'+esc(m.name)+'</button>';
+  }).join('');
+  wrap.querySelectorAll('button[data-mid]').forEach(b=>{
+    b.addEventListener('click',function(){
+      const mid=this.dataset.mid||null;
+      const list=activeList();
+      const item=list.find(i=>i.id===_editingItemId);
+      if(item){item.assignee=mid;}
+      // re-render chips with new selection
+      openItemEditor(_editingItemId);
+    });
+  });
+  document.getElementById('editItemOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('editItemName').focus(),50);
+}
+document.getElementById('editItemCancel').addEventListener('click',function(){
+  document.getElementById('editItemOverlay').classList.remove('open');
+  _editingItemId=null;
+});
+document.getElementById('editItemSave').addEventListener('click',function(){
+  if(_editingItemId==null)return;
+  const list=activeList();
+  const item=list.find(i=>i.id===_editingItemId);
+  if(!item){document.getElementById('editItemOverlay').classList.remove('open');return;}
+  const name=document.getElementById('editItemName').value.trim();
+  if(!name){toast('שם הפריט לא יכול להיות ריק');return;}
+  const qty=Math.max(1,parseInt(document.getElementById('editItemQty').value,10)||1);
+  const unit=(document.getElementById('editItemUnit').value||'').trim()||"יח'";
+  const note=(document.getElementById('editItemNote').value||'').trim();
+  item.name=name;
+  item.qty=qty;
+  item.unit=unit;
+  if(note)item.note=note; else delete item.note;
+  save();
+  document.getElementById('editItemOverlay').classList.remove('open');
+  _editingItemId=null;
+  renderListView();
+  toast('הפריט עודכן ✓');
+});
 
 /* ── Event delegation ────────────────── */
 document.getElementById('itemsWrap').addEventListener('click',function(e){
