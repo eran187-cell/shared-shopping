@@ -434,6 +434,9 @@ a,button,input,select{touch-action:manipulation}
 /* Confirm sheet */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
 .overlay.open{opacity:1;pointer-events:all}
+.overlay.overlay-top{align-items:flex-start}
+.overlay.overlay-top .sheet{border-radius:0 0 20px 20px;transform:translateY(-100%);max-height:90vh;overflow-y:auto}
+.overlay.overlay-top.open .sheet{transform:translateY(0)}
 .sheet{background:var(--sur);border-radius:20px 20px 0 0;padding:20px 20px 32px;width:100%;max-width:480px;transform:translateY(100%);transition:transform .28s cubic-bezier(.34,1.2,.64,1)}
 .overlay.open .sheet{transform:translateY(0)}
 .sheet h3{font-size:16px;font-weight:700;margin-bottom:6px}
@@ -731,24 +734,19 @@ a,button,input,select{touch-action:manipulation}
   </div>
 </div>
 
-<!-- Edit existing item overlay -->
-<div class="overlay" id="editItemOverlay">
+<!-- Edit existing item overlay (anchored to top so all fields stay visible above the keyboard) -->
+<div class="overlay overlay-top" id="editItemOverlay">
   <div class="sheet">
     <h3>עריכת פריט</h3>
     <div style="display:flex;flex-direction:column;gap:10px;margin:12px 0">
       <label style="font-size:12px;color:var(--mut)">שם הפריט</label>
       <input id="editItemName" type="text" maxlength="60" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:15px"/>
 
-      <div style="display:flex;gap:8px">
-        <div style="flex:1">
-          <label style="font-size:12px;color:var(--mut)">כמות</label>
-          <input id="editItemQty" type="number" min="1" step="1" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:15px;text-align:center"/>
-        </div>
-        <div style="flex:1">
-          <label style="font-size:12px;color:var(--mut)">יחידה</label>
-          <input id="editItemUnit" type="text" maxlength="10" placeholder="יח׳, ק&quot;ג, ליטר..." style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:15px"/>
-        </div>
-      </div>
+      <label style="font-size:12px;color:var(--mut)">כמות</label>
+      <input id="editItemQty" type="number" min="1" step="1" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:15px;text-align:center"/>
+
+      <label style="font-size:12px;color:var(--mut)">יחידה</label>
+      <div id="editItemUnitsRow" class="qa-units-row"></div>
 
       <label style="font-size:12px;color:var(--mut)">הערה (אופציונלי)</label>
       <input id="editItemNote" type="text" maxlength="120" placeholder="לדוגמה: חלב סויה" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:14px"/>
@@ -757,7 +755,7 @@ a,button,input,select{touch-action:manipulation}
       <div id="editItemMembers" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     </div>
     <div class="sheet-actions">
-      <button class="btn-primary" id="editItemSave">שמור</button>
+      <button class="btn-primary" id="editItemSave">שמירה</button>
       <button class="btn-cancel" id="editItemCancel">ביטול</button>
     </div>
   </div>
@@ -1851,35 +1849,60 @@ function toggleCheck(card){
 
 /* ── Edit existing item ────────────────── */
 let _editingItemId=null;
+let _editingUnit="יח'";
+const EDIT_UNITS=["יח'",'ק"ג','גרם','ליטר','מ"ל'];
 function openItemEditor(itemId){
   const list=activeList();
   const item=list.find(i=>i.id===itemId);
   if(!item)return;
   _editingItemId=itemId;
+  _editingUnit=item.unit||"יח'";
   document.getElementById('editItemName').value=item.name||'';
   document.getElementById('editItemQty').value=item.qty||1;
-  document.getElementById('editItemUnit').value=item.unit||"יח'";
   document.getElementById('editItemNote').value=item.note||'';
-  // Build assignee chips: "ללא" + each member, current selection highlighted
+
+  // Unit picker — same buttons as the quick-add
+  const unitsRow=document.getElementById('editItemUnitsRow');
+  // Make sure the current unit is in the palette (may be a custom one entered earlier)
+  const palette=EDIT_UNITS.includes(_editingUnit)?EDIT_UNITS:[_editingUnit,...EDIT_UNITS];
+  unitsRow.innerHTML=palette.map(u=>
+    '<button type="button" class="qa-unit'+(u===_editingUnit?' active':'')+'" data-unit="'+esc(u)+'">'+esc(u)+'</button>'
+  ).join('');
+  unitsRow.querySelectorAll('button[data-unit]').forEach(b=>{
+    b.addEventListener('click',function(){
+      _editingUnit=this.dataset.unit;
+      unitsRow.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.unit===_editingUnit));
+    });
+  });
+
+  // Assignee chips — every member always shown in their own color (filled when selected, outlined when not)
   const wrap=document.getElementById('editItemMembers');
+  const current=item.assignee||null;
   const opts=[{id:null,name:'ללא',color:'#999'},...((house.members)||[])];
   wrap.innerHTML=opts.map(m=>{
-    const sel=(item.assignee||null)===(m.id||null);
+    const sel=current===(m.id||null);
+    const color=m.color||'#999';
     return '<button type="button" data-mid="'+(m.id||'')+'" '
-      +'style="padding:6px 12px;border-radius:99px;border:1.5px solid '+(sel?m.color:'var(--bdr)')
-      +';background:'+(sel?m.color:'transparent')+';color:'+(sel?'#fff':'var(--txt)')
-      +';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">'+esc(m.name)+'</button>';
+      +'style="padding:6px 14px;border-radius:99px;border:1.5px solid '+color
+      +';background:'+(sel?color:'transparent')+';color:'+(sel?'#fff':color)
+      +';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s">'+esc(m.name)+'</button>';
   }).join('');
   wrap.querySelectorAll('button[data-mid]').forEach(b=>{
     b.addEventListener('click',function(){
       const mid=this.dataset.mid||null;
-      const list=activeList();
-      const item=list.find(i=>i.id===_editingItemId);
-      if(item){item.assignee=mid;}
-      // re-render chips with new selection
-      openItemEditor(_editingItemId);
+      const item=activeList().find(i=>i.id===_editingItemId);
+      if(item)item.assignee=mid;
+      // Re-render only chip colors, keep input/unit state
+      wrap.querySelectorAll('button[data-mid]').forEach(btn=>{
+        const opt=opts.find(o=>(o.id||'')===(btn.dataset.mid||''));
+        const color=opt&&opt.color||'#999';
+        const isSel=(mid||null)===(opt.id||null);
+        btn.style.background=isSel?color:'transparent';
+        btn.style.color=isSel?'#fff':color;
+      });
     });
   });
+
   document.getElementById('editItemOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('editItemName').focus(),50);
 }
@@ -1895,7 +1918,7 @@ document.getElementById('editItemSave').addEventListener('click',function(){
   const name=document.getElementById('editItemName').value.trim();
   if(!name){toast('שם הפריט לא יכול להיות ריק');return;}
   const qty=Math.max(1,parseInt(document.getElementById('editItemQty').value,10)||1);
-  const unit=(document.getElementById('editItemUnit').value||'').trim()||"יח'";
+  const unit=_editingUnit||"יח'";
   const note=(document.getElementById('editItemNote').value||'').trim();
   item.name=name;
   item.qty=qty;
