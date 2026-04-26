@@ -1979,6 +1979,7 @@ let shareTimer;
 document.getElementById('shareBtn').addEventListener('click',function(){
   if(!houseId)return;
   const url=location.href.split('?')[0].split('#')[0]+'?h='+houseId;
+  const message='פתחתי את אפליקציית הקניות המשותפות לבית, מוזמנים להצטרף מהקישור הבא:\n'+url;
   const ok=()=>{
     this.innerHTML='<span class="share-icon">✓</span> הלינק הועתק!';
     this.classList.add('copy-ok');
@@ -1989,9 +1990,10 @@ document.getElementById('shareBtn').addEventListener('click',function(){
     },2500);
   };
   if(navigator.share){
-    navigator.share({title:'הצטרפות לבית '+house.name,url}).catch(()=>{});ok();
+    // Pass text + url so receiving apps (WhatsApp etc.) include the invite line
+    navigator.share({title:'הצטרפות לבית '+(house.name||''),text:message,url}).catch(()=>{});ok();
   } else {
-    navigator.clipboard.writeText(url).then(ok).catch(()=>{prompt('לינק הצטרפות:',url);ok();});
+    navigator.clipboard.writeText(message).then(ok).catch(()=>{prompt('לינק הצטרפות:',message);ok();});
   }
 });
 
