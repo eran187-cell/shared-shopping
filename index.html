@@ -1099,17 +1099,15 @@ function openSetup(mode){
   const admin=isAdmin();
   document.getElementById('houseName').disabled=!admin;
   document.getElementById('addMemberBtn').style.display=admin?'':'none';
-  // non-admin notice
+  // small heading shown to everyone
   let notice=document.getElementById('adminNotice');
-  if(!admin){
-    if(!notice){
-      notice=document.createElement('p');
-      notice.id='adminNotice';
-      notice.style.cssText='text-align:center;font-size:13px;color:var(--mut);padding:4px 0';
-      notice.textContent='רק יוצר הבית יכול לערוך הגדרות';
-      document.getElementById('setupScroll').insertBefore(notice,document.getElementById('setupScroll').firstChild);
-    }
-  } else if(notice){notice.remove();}
+  if(!notice){
+    notice=document.createElement('p');
+    notice.id='adminNotice';
+    notice.style.cssText='text-align:center;font-size:13px;color:var(--mut);padding:4px 0';
+    document.getElementById('setupScroll').insertBefore(notice,document.getElementById('setupScroll').firstChild);
+  }
+  notice.textContent='רק יוצר הבית יכול לערוך הגדרות';
   updateShareBtnVisibility();
 
   if(mode==='setup'){
