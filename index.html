@@ -1126,8 +1126,8 @@ function renderMemberList(){
   const list=document.getElementById('memberList');
   list.innerHTML='';
   const admin=isAdmin();
-  // Claim banner for first-time joiners on a non-admin device
-  if(!admin && isUnclaimed() && editMembers.some(m=>!m.deviceId)){
+  // Claim banner for first-time joiners (any device that hasn't picked a name yet)
+  if(isUnclaimed() && editMembers.some(m=>!m.deviceId)){
     const banner=document.createElement('div');
     banner.style.cssText='background:var(--pril);border:1.5px solid var(--pri);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:var(--txt)';
     banner.innerHTML='👋 ברוכים הבאים! מי את/ה? לחצו על השם שלכם ברשימה כדי לקשר את המכשיר.';
@@ -1148,7 +1148,7 @@ function renderMemberList(){
       av.title='שינוי צבע';
       av.style.cursor='pointer';
       av.addEventListener('click',()=>openColorPicker(m.id,av));
-    } else if(!admin && isUnclaimed() && !m.deviceId){
+    } else if(isUnclaimed() && !m.deviceId){
       av.title='זה אני';
       av.style.cursor='pointer';
       av.style.boxShadow='0 0 0 2px var(--pri)';
