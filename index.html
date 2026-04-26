@@ -304,6 +304,19 @@ a,button,input,select{touch-action:manipulation}
   overflow:visible; /* must stay visible so dropdown above bar isn't clipped */
 }
 .qabar.visible{display:block}
+/* First-run hint pointing at the ⋮ button */
+.qa-dots-hint{
+  position:fixed;z-index:9000;background:#2dba7a;color:#fff;
+  padding:8px 12px;border-radius:10px;font-size:13px;font-weight:600;
+  box-shadow:0 6px 20px rgba(0,0,0,.18);pointer-events:auto;cursor:pointer;
+  white-space:nowrap;animation:hintPop .35s ease both, hintBob 1.6s ease-in-out 1.2s infinite;
+}
+.qa-dots-hint::after{
+  content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);
+  width:10px;height:10px;background:#2dba7a;
+}
+@keyframes hintPop{from{opacity:0;transform:translateY(6px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes hintBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 /* Autocomplete */
 .ac-wrap{flex:1;position:relative}
 .ac-drop{
@@ -1635,6 +1648,7 @@ function openList(id){
   document.getElementById('home').classList.add('hidden');
   document.getElementById('list').classList.remove('slide-right');
   document.getElementById('qabar').classList.add('visible');
+  _maybeShowDotsHint();
   // NOTE: deliberately NOT focusing qaInput on entry — opening the keyboard
   // automatically hides the list and feels intrusive. User taps the input
   // when they want to add.
@@ -2098,7 +2112,31 @@ document.addEventListener('click',e=>{
 })();
 
 /* ── Three-dots: open panel / close panel on second press ── */
+function _hideDotsHint(){
+  const h=document.getElementById('qaDotsHint');
+  if(h)h.remove();
+}
+function _maybeShowDotsHint(){
+  if(localStorage.getItem('sl3_dotsHintSeen'))return;
+  if(document.getElementById('qaDotsHint'))return;
+  const dots=document.getElementById('qaDots');
+  if(!dots)return;
+  const hint=document.createElement('div');
+  hint.id='qaDotsHint';hint.className='qa-dots-hint';
+  hint.textContent='לחצו להוספת מידע';
+  document.body.appendChild(hint);
+  const place=()=>{
+    const r=dots.getBoundingClientRect();
+    hint.style.left=(r.left+r.width/2-hint.offsetWidth/2)+'px';
+    hint.style.top=(r.top-hint.offsetHeight-10)+'px';
+  };
+  place();requestAnimationFrame(place);setTimeout(place,50);
+  window.addEventListener('resize',place);
+  hint.addEventListener('click',()=>{localStorage.setItem('sl3_dotsHintSeen','1');_hideDotsHint();});
+  setTimeout(()=>{localStorage.setItem('sl3_dotsHintSeen','1');_hideDotsHint();},8000);
+}
 document.getElementById('qaDots').addEventListener('click',function(){
+  localStorage.setItem('sl3_dotsHintSeen','1');_hideDotsHint();
   const more=document.getElementById('qaMore');
   const isOpen=more.classList.contains('open');
   if(isOpen){
