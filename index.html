@@ -563,6 +563,7 @@ a,button,input,select{touch-action:manipulation}
       <span>📲</span> הוספת קיצור לדף הבית
     </button>
     <button class="btn-leave" id="leaveHouseBtn" style="display:none">🚪 יציאה מהקבוצה</button>
+    <button class="btn-leave" id="resetClaimsBtn" style="display:none;background:#fff3cd;color:#7a5a00;border-color:#e0c060">🧹 אפס שיוכים (זמני)</button>
 
     <!-- house code (shown in settings mode) — moved to bottom because most join via link -->
     <div class="house-code-card" id="houseCodeCard" style="display:none">
@@ -1086,6 +1087,7 @@ function openSetup(mode){
   document.getElementById('setupHeader').style.display=mode==='setup'?'block':'none';
   document.getElementById('saveSetupBtn').style.display=mode==='setup'?'block':'none';
   document.getElementById('leaveHouseBtn').style.display=mode==='settings'?'block':'none';
+  document.getElementById('resetClaimsBtn').style.display=mode==='settings'?'block':'none';
   const hcc=document.getElementById('houseCodeCard');
   if(houseId&&mode==='settings'){
     document.getElementById('houseCodeDisplay').textContent=houseId;
@@ -1321,6 +1323,27 @@ document.getElementById('tellFriendsBtn').addEventListener('click',async functio
   }
   this.disabled=false;
   this.innerHTML=origHTML;
+});
+
+// Temporary debug helper — strips deviceId from every member + adminId
+// + this device's local id so the claim flow can be tested fresh.
+document.getElementById('resetClaimsBtn').addEventListener('click',function(){
+  if(!houseId){toast('אין בית פעיל');return;}
+  showConfirm('לאפס שיוכי מכשירים לכל החברים בבית? (פעולה זמנית לבדיקה)',async function(){
+    try{
+      const snap=await firebase.database().ref('houses/'+houseId+'/members').once('value');
+      const arr=snap.val()||[];
+      for(let i=0;i<arr.length;i++){
+        if(arr[i])await firebase.database().ref('houses/'+houseId+'/members/'+i+'/deviceId').remove();
+      }
+      await firebase.database().ref('houses/'+houseId+'/adminId').remove();
+      localStorage.removeItem('sl3_deviceId');
+      toast('שיוכים אופסו ✓ — מרענן');
+      setTimeout(()=>location.reload(),900);
+    }catch(e){
+      toast('שגיאה: '+(e.message||e.code||'נכשל'));
+    }
+  });
 });
 
 // Leave house — stops listener, clears houseId, returns to onboarding
