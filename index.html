@@ -1976,21 +1976,46 @@ document.getElementById('delConfirm').addEventListener('click',function(){
 
 /* ══ SHARE HOUSE CODE ════════════════════════════════ */
 let shareTimer;
-document.getElementById('shareBtn').addEventListener('click',function(){
+/* Shorten via TinyURL with localStorage cache + 2s timeout fallback */
+async function shortenUrl(longUrl){
+  const cacheKey='sl3_short_'+longUrl;
+  const cached=localStorage.getItem(cacheKey);
+  if(cached)return cached;
+  try{
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),2000);
+    const res=await fetch('https://tinyurl.com/api-create.php?url='+encodeURIComponent(longUrl),{signal:ctrl.signal});
+    clearTimeout(timer);
+    if(!res.ok)throw 0;
+    const short=(await res.text()).trim();
+    if(/^https?:\/\//.test(short)){
+      localStorage.setItem(cacheKey,short);
+      return short;
+    }
+    throw 0;
+  }catch(_){
+    return longUrl; // graceful fallback
+  }
+}
+
+document.getElementById('shareBtn').addEventListener('click',async function(){
   if(!houseId)return;
-  const url=location.href.split('?')[0].split('#')[0]+'?h='+houseId;
+  const longUrl=location.href.split('?')[0].split('#')[0]+'?h='+houseId;
+  // show "מקצר..." while waiting for the shortener
+  const origHTML=this.innerHTML;
+  this.innerHTML='<span class="share-icon">⏳</span> מקצר קישור...';
+  const url=await shortenUrl(longUrl);
   const message='פתחתי את אפליקציית הקניות המשותפות לבית, מוזמנים להצטרף מהקישור הבא:\n'+url;
   const ok=()=>{
     this.innerHTML='<span class="share-icon">✓</span> הלינק הועתק!';
     this.classList.add('copy-ok');
     clearTimeout(shareTimer);
     shareTimer=setTimeout(()=>{
-      this.innerHTML='<span class="share-icon">🔗</span> שיתוף קוד הבית';
+      this.innerHTML=origHTML;
       this.classList.remove('copy-ok');
     },2500);
   };
   if(navigator.share){
-    // Pass text + url so receiving apps (WhatsApp etc.) include the invite line
     navigator.share({title:'הצטרפות לבית '+(house.name||''),text:message,url}).catch(()=>{});ok();
   } else {
     navigator.clipboard.writeText(message).then(ok).catch(()=>{prompt('לינק הצטרפות:',message);ok();});
