@@ -1146,10 +1146,13 @@ function renderMemberList(){
     av.className='mem-av';av.style.background=m.color;
     av.textContent=initials(m.name||'?');
     const doClaim=()=>{
-      m.deviceId=deviceId;
-      commitSettings();
-      renderMemberList();
-      toast('נקשרת ל-"'+m.name+'"');
+      const nm=(m.name||'').trim()||'חבר ללא שם';
+      showConfirm('האם לבצע שיוך של המכשיר ל-"'+nm+'"?',()=>{
+        m.deviceId=deviceId;
+        commitSettings();
+        renderMemberList();
+        toast('נקשרת ל-"'+nm+'"');
+      });
     };
     if(claimable){
       av.title='זה אני';
