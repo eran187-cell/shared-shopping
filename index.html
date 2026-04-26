@@ -563,7 +563,6 @@ a,button,input,select{touch-action:manipulation}
       <span>📲</span> הוספת קיצור לדף הבית
     </button>
     <button class="btn-leave" id="leaveHouseBtn" style="display:none">🚪 יציאה מהקבוצה</button>
-    <button class="btn-leave" id="resetClaimsBtn" style="display:none;background:#fff3cd;color:#7a5a00;border-color:#e0c060">🧹 אפס שיוכים (זמני)</button>
 
     <!-- house code (shown in settings mode) — moved to bottom because most join via link -->
     <div class="house-code-card" id="houseCodeCard" style="display:none">
@@ -1087,7 +1086,6 @@ function openSetup(mode){
   document.getElementById('setupHeader').style.display=mode==='setup'?'block':'none';
   document.getElementById('saveSetupBtn').style.display=mode==='setup'?'block':'none';
   document.getElementById('leaveHouseBtn').style.display=mode==='settings'?'block':'none';
-  document.getElementById('resetClaimsBtn').style.display=mode==='settings'?'block':'none';
   const hcc=document.getElementById('houseCodeCard');
   if(houseId&&mode==='settings'){
     document.getElementById('houseCodeDisplay').textContent=houseId;
@@ -1323,27 +1321,6 @@ document.getElementById('tellFriendsBtn').addEventListener('click',async functio
   }
   this.disabled=false;
   this.innerHTML=origHTML;
-});
-
-// Temporary debug helper — strips deviceId from every member + adminId
-// + this device's local id so the claim flow can be tested fresh.
-document.getElementById('resetClaimsBtn').addEventListener('click',function(){
-  if(!houseId){toast('אין בית פעיל');return;}
-  showConfirm('לאפס שיוכי מכשירים לכל החברים בבית? (פעולה זמנית לבדיקה)',async function(){
-    try{
-      const snap=await firebase.database().ref('houses/'+houseId+'/members').once('value');
-      const arr=snap.val()||[];
-      for(let i=0;i<arr.length;i++){
-        if(arr[i])await firebase.database().ref('houses/'+houseId+'/members/'+i+'/deviceId').remove();
-      }
-      await firebase.database().ref('houses/'+houseId+'/adminId').remove();
-      localStorage.removeItem('sl3_deviceId');
-      toast('שיוכים אופסו ✓ — מרענן');
-      setTimeout(()=>location.reload(),900);
-    }catch(e){
-      toast('שגיאה: '+(e.message||e.code||'נכשל'));
-    }
-  });
 });
 
 // Leave house — stops listener, clears houseId, returns to onboarding
@@ -2592,12 +2569,17 @@ async function loadAdminStats(){
           +'<span style="font-size:12px;color:var(--mut)">👥 '+(h.m||0)+'</span>'
           +'<span style="font-size:12px;color:var(--mut)">🛒 '+(h.i||0)+'</span>'
           +'<span style="font-size:11px;color:'+ageColor+';min-width:70px;text-align:left">'+ageLabel+'</span>'
+          +(code?'<button data-reset-code="'+esc(code)+'" data-reset-name="'+esc(h.n||code||hash.slice(0,6))+'" title="אפס שיוכי מכשירים (תמיכה)" style="background:#f0ad4e;border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;padding:0;font-weight:700">🧹</button>':'')
           +'<button data-del-hash="'+hash+'" data-del-code="'+esc(code)+'" data-del-name="'+esc(h.n||code||hash.slice(0,6))+'" title="מחק בית לחלוטין" style="background:#e74c3c;border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;padding:0;font-weight:700">🗑</button>'
           +'</div>';
       }).join('');
       // wire delete buttons — full house delete if code is known, else stats-only
       listEl.querySelectorAll('[data-del-hash]').forEach(btn=>{
         btn.addEventListener('click',()=>adminDeleteRow(btn.dataset.delHash,btn.dataset.delCode,btn.dataset.delName));
+      });
+      // wire reset-claims buttons — strips deviceId from all members of a house
+      listEl.querySelectorAll('[data-reset-code]').forEach(btn=>{
+        btn.addEventListener('click',()=>adminResetClaims(btn.dataset.resetCode,btn.dataset.resetName));
       });
     } else {
       listEl.innerHTML='<div style="text-align:center;color:var(--mut);padding:20px">אין עדיין נתוני בתים.</div>';
@@ -2676,6 +2658,23 @@ async function adminDeleteRow(hash,code,name){
     }catch(err){
       document.getElementById('adminError').textContent='מחיקה נכשלה: '+(err.message||err.code||err);
     }
+  }
+}
+async function adminResetClaims(code,name){
+  if(!code)return;
+  if(!confirm('לאפס שיוכי מכשירים בבית "'+name+'"?\n\nכל החברים יוחזרו למצב לא-משויך וכל אחד יוכל לבחור את עצמו ברשימה מחדש. ההגדרות, הרשימות והפריטים נשמרים.'))return;
+  try{
+    document.getElementById('adminError').textContent='מאפס שיוכים...';
+    const snap=await db.ref('houses/'+code+'/house/members').once('value');
+    const arr=snap.val()||[];
+    for(let i=0;i<arr.length;i++){
+      if(arr[i])await db.ref('houses/'+code+'/house/members/'+i+'/deviceId').remove();
+    }
+    await db.ref('houses/'+code+'/house/adminId').remove();
+    document.getElementById('adminError').textContent='';
+    alert('שיוכים בבית "'+name+'" אופסו בהצלחה.');
+  }catch(err){
+    document.getElementById('adminError').textContent='איפוס נכשל: '+(err.message||err.code||err);
   }
 }
 document.getElementById('adminDelHouseBtn').addEventListener('click',adminDeleteHouseByCode);
