@@ -1,0 +1,10 @@
+# Personal media files dropped into the project folder
+*.mp4
+*.mov
+*.webm
+*.avi
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
