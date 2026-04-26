@@ -1130,7 +1130,7 @@ function renderMemberList(){
   if(isUnclaimed() && editMembers.some(m=>!m.deviceId)){
     const banner=document.createElement('div');
     banner.style.cssText='background:var(--pril);border:1.5px solid var(--pri);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:var(--txt)';
-    banner.innerHTML='👋 ברוכים הבאים! מי את/ה? לחצו על השם שלכם ברשימה כדי לקשר את המכשיר.';
+    banner.innerHTML='ברוכים הבאים! בחרו את השם שלכם ברשימה כדי לקשר את המכשיר';
     list.appendChild(banner);
   }
 
@@ -1140,24 +1140,31 @@ function renderMemberList(){
     row.style.animationDelay=(i*30)+'ms';
     const isMine=m.deviceId===deviceId;
     const canEditThisRow=admin||isMine;
+    const claimable=isUnclaimed() && !m.deviceId;
 
     const av=document.createElement('div');
     av.className='mem-av';av.style.background=m.color;
     av.textContent=initials(m.name||'?');
-    if(canEditThisRow){
-      av.title='שינוי צבע';
-      av.style.cursor='pointer';
-      av.addEventListener('click',()=>openColorPicker(m.id,av));
-    } else if(isUnclaimed() && !m.deviceId){
+    const doClaim=()=>{
+      m.deviceId=deviceId;
+      commitSettings();
+      renderMemberList();
+      toast('נקשרת ל-"'+m.name+'"');
+    };
+    if(claimable){
       av.title='זה אני';
       av.style.cursor='pointer';
       av.style.boxShadow='0 0 0 2px var(--pri)';
-      av.addEventListener('click',()=>{
-        m.deviceId=deviceId;
-        commitSettings();
-        renderMemberList();
-        toast('נקשרת ל-"'+m.name+'"');
+      av.addEventListener('click',doClaim);
+      row.style.cursor='pointer';
+      row.addEventListener('click',(e)=>{
+        if(e.target.closest('.mem-name-inp,.mem-admin-badge,.mem-del,.mem-av'))return;
+        doClaim();
       });
+    } else if(canEditThisRow){
+      av.title='שינוי צבע';
+      av.style.cursor='pointer';
+      av.addEventListener('click',()=>openColorPicker(m.id,av));
     }
 
     const wrap=document.createElement('div');
@@ -1167,6 +1174,10 @@ function renderMemberList(){
     inp.className='mem-name-inp';inp.type='text';
     inp.value=m.name;inp.placeholder='שם השותף';
     inp.disabled=!canEditThisRow;
+    if(claimable){
+      inp.style.cursor='pointer';
+      inp.addEventListener('click',doClaim);
+    }
     inp.addEventListener('input',()=>{
       m.name=inp.value;
       av.textContent=initials(m.name||'?');
