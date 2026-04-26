@@ -2173,15 +2173,16 @@ async function loadAdminStats(){
       +'</div>'
     ).join('');
 
-    // ── 7-day login chart (CSS bars)
+    // ── 7-day login chart — pixel-based heights so bars scale correctly
+    const BAR_AREA=90; // px reserved for the actual bar above the date label
     document.getElementById('adminLoginsChart').innerHTML=
-      '<div style="display:flex;align-items:flex-end;gap:6px;height:120px;padding:4px 0">'
+      '<div style="display:flex;align-items:stretch;gap:6px;padding:4px 0">'
       +days.map(d=>{
-        const h=Math.round((d.count/maxLogins)*100);
-        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'
+        const h=Math.max(2,Math.round((d.count/maxLogins)*BAR_AREA));
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end">'
           +'<div style="font-size:11px;color:var(--mut);font-weight:700">'+d.count+'</div>'
-          +'<div style="width:100%;height:'+h+'%;min-height:2px;background:var(--pri);border-radius:4px 4px 0 0;transition:height .3s"></div>'
-          +'<div style="font-size:10px;color:var(--mut);writing-mode:horizontal-tb">'+d.label+'</div>'
+          +'<div style="width:100%;height:'+h+'px;background:var(--pri);border-radius:4px 4px 0 0;transition:height .3s"></div>'
+          +'<div style="font-size:10px;color:var(--mut)">'+d.label+'</div>'
           +'</div>';
       }).join('')
       +'</div>';
