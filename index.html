@@ -1736,11 +1736,16 @@ function _setQaQty(v){
     minusBtn.style.cursor=_qaQty<=1?'default':'pointer';
   }
 }
+function _myMemberId(){
+  const m=Array.isArray(house&&house.members)?house.members:[];
+  const mine=m.find(x=>x&&x.deviceId===deviceId);
+  return mine?mine.id:null;
+}
 function _resetQaMore(){
   _setQaQty(1); // also updates disabled state on minus
   _qaUnit="יח'";
   document.querySelectorAll('.qa-unit').forEach(b=>b.classList.toggle('active',b.dataset.unit==="יח'"));
-  selMember=null;renderQaMembers();
+  selMember=_myMemberId();renderQaMembers();
   document.getElementById('qaNoteInp').value='';
   document.getElementById('qaMore').classList.remove('open');
   document.getElementById('qaDots').classList.remove('active');
