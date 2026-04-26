@@ -743,7 +743,11 @@ a,button,input,select{touch-action:manipulation}
       <input id="editItemName" type="text" maxlength="60" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:15px"/>
 
       <label style="font-size:12px;color:var(--mut)">כמות</label>
-      <input id="editItemQty" type="number" min="1" step="1" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:15px;text-align:center"/>
+      <div class="qty-stepper-box">
+        <button type="button" class="qty-stepper-btn" id="editItemQtyMinus" aria-label="הפחת">−</button>
+        <input id="editItemQty" type="number" min="1" step="1" inputmode="numeric"/>
+        <button type="button" class="qty-stepper-btn" id="editItemQtyPlus" aria-label="הוסף">+</button>
+      </div>
 
       <label style="font-size:12px;color:var(--mut)">יחידה</label>
       <div id="editItemUnitsRow" class="qa-units-row"></div>
@@ -1299,7 +1303,7 @@ document.getElementById('tellFriendsBtn').addEventListener('click',async functio
   const message='גילית אפליקציית רשימת קניות משותפת לכל המשפחה. כל אחד מוסיף, כולם רואים בזמן אמת. נסו את זה: '+url;
   try{
     await navigator.clipboard.writeText(message);
-    toast('הקישור הועתק! הדבק והודע לחברים');
+    toast('הקישור הועתק, ניתן לשתף עם החברים');
   }catch(_){
     prompt('העתק והדבק את ההודעה הבאה:',message);
   }
@@ -2268,27 +2272,19 @@ document.getElementById('shareBtn').addEventListener('click',async function(){
   let message='פתחתי את אפליקציית הקניות המשותפות לבית, מוזמנים להצטרף מהקישור הבא:\n'+url;
   const escUrl=url.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   message=message.replace(new RegExp('('+escUrl+')(\\s*\\1)+','g'),'$1');
-  const done=(label)=>{
-    this.innerHTML='<span class="share-icon">✓</span> '+label;
-    this.classList.add('copy-ok');
-    clearTimeout(shareTimer);
-    shareTimer=setTimeout(()=>{
-      this.innerHTML=origHTML;
-      this.classList.remove('copy-ok');
-    },2800);
-  };
-  // Always copy to clipboard — predictable across platforms. native
-  // navigator.share on Android+WhatsApp duplicated the URL because
-  // Chrome auto-extracts a url alongside the text we provided.
-  try{
-    await navigator.clipboard.writeText(message);
-    done('הועתק! הדבק בוואטסאפ');
-    toast('ההודעה הועתקה ללוח — הדבק בוואטסאפ או בכל אפליקציה שתבחר');
-  }catch(_){
-    // older browser without clipboard API — show prompt as last resort
-    prompt('העתק והדבק את ההודעה הבאה:',message);
-    done('הועתק!');
-  }
+  this.innerHTML='<span class="share-icon">✓</span> נפתח וואטסאפ...';
+  this.classList.add('copy-ok');
+  clearTimeout(shareTimer);
+  shareTimer=setTimeout(()=>{
+    this.innerHTML=origHTML;
+    this.classList.remove('copy-ok');
+  },2800);
+  try{await navigator.clipboard.writeText(message);}catch(_){}
+  toast('הקישור הועתק, ניתן לשתף עם החברים');
+  // Open WhatsApp directly with the message pre-filled.
+  // wa.me opens the app on mobile, web.whatsapp.com on desktop.
+  const waUrl='https://wa.me/?text='+encodeURIComponent(message);
+  window.open(waUrl,'_blank');
 });
 
 /* show share btn when in settings mode */
