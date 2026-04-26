@@ -24,7 +24,8 @@
       "Bash(git tag *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(rm -f \"304e8ade-34ea-4aad-8243-a765a18d8e6b.jpg\" \"6d6caa81-5254-4ac2-b7b6-1f8e60a30871.jpg\" \"iloveimg-compressed.zip\" \"iloveimg-resized.zip\")"
     ]
   }
 }
