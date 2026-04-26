@@ -117,6 +117,13 @@ a,button,input,select{touch-action:manipulation}
 .mem-name-inp:focus{border-color:var(--pri)}
 .mem-del{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:6px;border:none;background:transparent;color:var(--mut);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
 .mem-del:hover{background:#fdecea;color:var(--red)}
+.mem-admin-badge{position:absolute;left:34px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:6px;border:none;background:transparent;color:var(--bdr);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;filter:grayscale(1) opacity(.45)}
+.mem-admin-badge.on{filter:none;color:#f5a623}
+.mem-admin-badge:disabled{cursor:default}
+.mem-admin-badge:not(:disabled):hover{background:rgba(245,166,35,.12)}
+/* When admin badge is present but no delete (non-admin self), align it right */
+.mem-inp-wrap:not(:has(.mem-del)) .mem-admin-badge{left:4px}
+.av.is-admin{box-shadow:0 0 0 2px #f5a623}
 
 .add-member-btn{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:1.5px dashed var(--bdr);background:transparent;color:var(--mut);font-size:14px;cursor:pointer;width:100%;transition:all .15s;font-family:inherit}
 .add-member-btn:hover{border-color:var(--pri);color:var(--pri);background:var(--pril)}
@@ -822,7 +829,24 @@ const db=firebase.database();
 const SESSION=Math.random().toString(36).slice(2);
 let deviceId=localStorage.getItem('sl3_deviceId')||(()=>{const id=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('sl3_deviceId',id);return id;})();
 let houseId=localStorage.getItem('sl3_houseId')||null;
-function isAdmin(){return !house.adminId||house.adminId===deviceId;}
+// Admin if any member with isAdmin=true claims this device (or the legacy
+// single-admin field still matches, for back-compat).
+// During first-time setup before any member is saved, the creator is
+// admin by default.
+function isAdmin(){
+  const m=Array.isArray(house&&house.members)?house.members:[];
+  if(m.some(x=>x&&x.isAdmin&&x.deviceId===deviceId))return true;
+  if(house&&house.adminId&&house.adminId===deviceId)return true;
+  // No admins assigned yet (e.g. brand-new house, or legacy data) — current device acts as admin.
+  if(!m.some(x=>x&&x.isAdmin)&&!(house&&house.adminId))return true;
+  return false;
+}
+// True when current device hasn't claimed any member yet — used to prompt the user.
+function isUnclaimed(){
+  const m=Array.isArray(house&&house.members)?house.members:[];
+  if(!m.length)return false; // brand-new house with no members yet
+  return !m.some(x=>x&&x.deviceId===deviceId);
+}
 let _fbRef=null, _saving=false;
 
 /* ── Anonymous aggregate stats (no PII / no house-codes exposed) ───────── */
@@ -1066,16 +1090,40 @@ function openSetup(mode){
 function renderMemberList(){
   const list=document.getElementById('memberList');
   list.innerHTML='';
+  const admin=isAdmin();
+  // Claim banner for first-time joiners on a non-admin device
+  if(!admin && isUnclaimed() && editMembers.some(m=>!m.deviceId)){
+    const banner=document.createElement('div');
+    banner.style.cssText='background:var(--pril);border:1.5px solid var(--pri);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:var(--txt)';
+    banner.innerHTML='👋 ברוכים הבאים! מי את/ה? לחצו על השם שלכם ברשימה כדי לקשר את המכשיר.';
+    list.appendChild(banner);
+  }
+
   editMembers.forEach((m,i)=>{
     const row=document.createElement('div');
     row.className='member-row';
     row.style.animationDelay=(i*30)+'ms';
+    const isMine=m.deviceId===deviceId;
+    const canEditThisRow=admin||isMine;
 
     const av=document.createElement('div');
     av.className='mem-av';av.style.background=m.color;
     av.textContent=initials(m.name||'?');
-    av.title='שינוי צבע';
-    av.addEventListener('click',()=>openColorPicker(m.id,av));
+    if(canEditThisRow){
+      av.title='שינוי צבע';
+      av.style.cursor='pointer';
+      av.addEventListener('click',()=>openColorPicker(m.id,av));
+    } else if(!admin && isUnclaimed() && !m.deviceId){
+      av.title='זה אני';
+      av.style.cursor='pointer';
+      av.style.boxShadow='0 0 0 2px var(--pri)';
+      av.addEventListener('click',()=>{
+        m.deviceId=deviceId;
+        commitSettings();
+        renderMemberList();
+        toast('נקשרת ל-"'+m.name+'"');
+      });
+    }
 
     const wrap=document.createElement('div');
     wrap.className='mem-inp-wrap';
@@ -1083,14 +1131,35 @@ function renderMemberList(){
     const inp=document.createElement('input');
     inp.className='mem-name-inp';inp.type='text';
     inp.value=m.name;inp.placeholder='שם השותף';
-    inp.disabled=!isAdmin();
+    inp.disabled=!canEditThisRow;
     inp.addEventListener('input',()=>{
       m.name=inp.value;
       av.textContent=initials(m.name||'?');
     });
     wrap.appendChild(inp);
 
-    if(isAdmin()){
+    // ⭐ admin badge — visible to everyone, tappable only for admins
+    const badge=document.createElement('button');
+    badge.className='mem-admin-badge'+(m.isAdmin?' on':'');
+    badge.textContent='⭐';
+    badge.title=m.isAdmin?(admin?'בטל מנהל':'מנהל'):(admin?'הפוך למנהל':'אינו מנהל');
+    badge.disabled=!admin;
+    if(admin){
+      badge.addEventListener('click',()=>{
+        m.isAdmin=!m.isAdmin;
+        // safety: never end up with zero admins
+        if(!editMembers.some(x=>x.isAdmin)){
+          toast('חייב להישאר לפחות מנהל אחד');
+          m.isAdmin=true;
+          renderMemberList();
+          return;
+        }
+        renderMemberList();
+      });
+    }
+    wrap.appendChild(badge);
+
+    if(admin){
       const del=document.createElement('button');
       del.className='mem-del';del.textContent='✕';del.title='הסר';
       del.addEventListener('click',()=>{
@@ -1103,6 +1172,9 @@ function renderMemberList(){
     row.appendChild(av);row.appendChild(wrap);
     list.appendChild(row);
   });
+
+  // Add-member button only visible to admin
+  document.getElementById('addMemberBtn').style.display=admin?'flex':'none';
 }
 
 document.getElementById('addMemberBtn').addEventListener('click',function(){
@@ -1121,7 +1193,24 @@ function commitSettings(){
   const validMembers=editMembers.filter(m=>m.name.trim());
   if(!validMembers.length){toast('יש להוסיף לפחות שותף אחד');return false;}
   house.name=hname;
-  house.members=validMembers.map(m=>({...m,name:m.name.trim()}));
+  house.members=validMembers.map(m=>{
+    const out={...m,name:m.name.trim()};
+    // sanitize: only keep deviceId/isAdmin if present
+    if(!out.deviceId)delete out.deviceId;
+    if(!out.isAdmin)delete out.isAdmin;
+    return out;
+  });
+  // Bootstrap: if no admins defined and no one is bound to this device,
+  // claim the first member for this device and make them admin.
+  if(!house.members.some(m=>m.isAdmin)){
+    const mine=house.members.find(m=>m.deviceId===deviceId);
+    if(mine){mine.isAdmin=true;}
+    else if(house.members[0]){house.members[0].isAdmin=true;house.members[0].deviceId=deviceId;}
+  }
+  // Ensure at least one admin still exists after edits (otherwise system is locked out)
+  if(!house.members.some(m=>m.isAdmin)){
+    if(house.members[0])house.members[0].isAdmin=true;
+  }
   save();
   return true;
 }
@@ -1137,13 +1226,30 @@ document.getElementById('saveSetupBtn').addEventListener('click',function(){
   setTimeout(showInstallFlow,800);
 });
 
-// Settings mode: back arrow saves (admin only)
+// Settings mode: back arrow saves
+// - Admin: full commit (house name + member list + admin badges)
+// - Non-admin: persist only their own member-row edits (name/color)
 document.getElementById('settingsBack').addEventListener('click',function(){
-  if(!isAdmin()){goHome();return;}
-  if(!commitSettings())return;
+  if(isAdmin()){
+    if(!commitSettings())return;
+    renderHome();
+    goHome();
+    toast('ההגדרות נשמרו ✓');
+    return;
+  }
+  // Non-admin: copy edits from their own row back into house.members, save.
+  const mine=editMembers.find(m=>m.deviceId===deviceId);
+  if(mine){
+    const target=house.members.find(m=>m.id===mine.id);
+    if(target){
+      target.name=(mine.name||'').trim()||target.name;
+      target.color=mine.color||target.color;
+      save();
+      toast('הפרטים שלך נשמרו ✓');
+    }
+  }
   renderHome();
   goHome();
-  toast('ההגדרות נשמרו ✓');
 });
 
 // Cancel: discard changes and go home
@@ -1311,7 +1417,7 @@ function renderHome(){
   document.getElementById('houseNameEl').textContent=(house&&house.name)||'הבית שלנו';
   const members=Array.isArray(house&&house.members)?house.members:[];
   document.getElementById('membersEl').innerHTML=
-    members.map(m=>'<div class="av" style="background:'+m.color+';margin-right:-8px" title="'+esc(m.name)+'">'+initials(m.name)+'</div>').join('');
+    members.map(m=>'<div class="av'+(m.isAdmin?' is-admin':'')+'" style="background:'+m.color+';margin-right:-8px" title="'+esc(m.name)+(m.isAdmin?' (מנהל)':'')+'">'+initials(m.name)+'</div>').join('');
   // Ensure listTypes is always usable — avoids blank home if remote data was malformed
   if(!Array.isArray(listTypes)||!listTypes.length)listTypes=DEFAULT_TYPES.map(x=>({...x}));
   if(!items||typeof items!=='object')items={};
