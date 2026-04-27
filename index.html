@@ -2173,14 +2173,14 @@ function _hideShareHint(){
   if(h)h.remove();
 }
 function _maybeShowShareHint(){
-  if(localStorage.getItem('sl3_shareHintSeen'))return;
-  const n=parseInt(localStorage.getItem('sl3_shareHintEntry')||'0',10)+1;
-  localStorage.setItem('sl3_shareHintEntry',String(n));
+  if(localStorage.getItem('sl3_shareHintSeen_v2'))return;
+  const n=parseInt(localStorage.getItem('sl3_shareHintEntry_v2')||'0',10)+1;
+  localStorage.setItem('sl3_shareHintEntry_v2',String(n));
   if(n!==3)return;
   if(document.getElementById('shareHint'))return;
   const target=document.getElementById('waShareBtn');
   if(!target)return;
-  localStorage.setItem('sl3_shareHintSeen','1');
+  localStorage.setItem('sl3_shareHintSeen_v2','1');
   const hint=document.createElement('div');
   hint.id='shareHint';hint.className='qa-dots-hint below';
   hint.textContent='ניתן לשתף רשימה גם מכאן';
@@ -2196,12 +2196,12 @@ function _maybeShowShareHint(){
   setTimeout(_hideShareHint,8000);
 }
 function _maybeShowResetHint(){
-  const shown=parseInt(localStorage.getItem('sl3_resetHintShown')||'0',10);
+  const shown=parseInt(localStorage.getItem('sl3_resetHintShown_v2')||'0',10);
   if(shown>=2)return;
   if(document.getElementById('resetHint'))return;
   const target=document.getElementById('resetListBtn');
   if(!target)return;
-  localStorage.setItem('sl3_resetHintShown',String(shown+1));
+  localStorage.setItem('sl3_resetHintShown_v2',String(shown+1));
   const hint=document.createElement('div');
   hint.id='resetHint';hint.className='qa-dots-hint below';
   hint.textContent='לאיפוס הסימונים';
@@ -2217,7 +2217,7 @@ function _maybeShowResetHint(){
   setTimeout(_hideResetHint,8000);
 }
 function _maybeShowDotsHint(){
-  if(localStorage.getItem('sl3_dotsHintSeen_v2'))return;
+  if(localStorage.getItem('sl3_dotsHintSeen_v3'))return;
   if(document.getElementById('qaDotsHint'))return;
   const dots=document.getElementById('qaDots');
   if(!dots)return;
@@ -2232,11 +2232,11 @@ function _maybeShowDotsHint(){
   };
   place();requestAnimationFrame(place);setTimeout(place,50);
   window.addEventListener('resize',place);
-  hint.addEventListener('click',()=>{localStorage.setItem('sl3_dotsHintSeen_v2','1');_hideDotsHint();});
-  setTimeout(()=>{localStorage.setItem('sl3_dotsHintSeen_v2','1');_hideDotsHint();},8000);
+  hint.addEventListener('click',()=>{localStorage.setItem('sl3_dotsHintSeen_v3','1');_hideDotsHint();});
+  setTimeout(()=>{localStorage.setItem('sl3_dotsHintSeen_v3','1');_hideDotsHint();},8000);
 }
 document.getElementById('qaDots').addEventListener('click',function(){
-  localStorage.setItem('sl3_dotsHintSeen_v2','1');_hideDotsHint();
+  localStorage.setItem('sl3_dotsHintSeen_v3','1');_hideDotsHint();
   const more=document.getElementById('qaMore');
   const isOpen=more.classList.contains('open');
   if(isOpen){
@@ -2297,7 +2297,7 @@ function renderChips(){/* members rendered in more panel on open */}
 
 /* ── WhatsApp share ──────────────────── */
 document.getElementById('waShareBtn').addEventListener('click', function () {
-  localStorage.setItem('sl3_shareHintSeen','1');_hideShareHint();
+  localStorage.setItem('sl3_shareHintSeen_v2','1');_hideShareHint();
   const lt   = getLT(activeId);
   const list = activeList();
 
@@ -2368,7 +2368,7 @@ document.getElementById('listTitle').addEventListener('keydown', function(e) {
 
 /* ── Reset list ──────────────────────── */
 document.getElementById('resetListBtn').addEventListener('click',function(){
-  localStorage.setItem('sl3_resetHintShown','2');_hideResetHint();
+  localStorage.setItem('sl3_resetHintShown_v2','2');_hideResetHint();
   const list=activeList();
   if(!list.some(i=>i.checked)){toast('אין פריטים מסומנים לאיפוס');return;}
   list.forEach(i=>i.checked=false);
