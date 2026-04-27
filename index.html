@@ -1683,6 +1683,7 @@ function openList(id){
   document.getElementById('qabar').classList.add('visible');
   _maybeShowDotsHint();
   _maybeShowResetHint();
+  _maybeShowShareHint();
   // NOTE: deliberately NOT focusing qaInput on entry — opening the keyboard
   // automatically hides the list and feels intrusive. User taps the input
   // when they want to add.
@@ -2167,6 +2168,33 @@ function _hideResetHint(){
   const h=document.getElementById('resetHint');
   if(h)h.remove();
 }
+function _hideShareHint(){
+  const h=document.getElementById('shareHint');
+  if(h)h.remove();
+}
+function _maybeShowShareHint(){
+  if(localStorage.getItem('sl3_shareHintSeen'))return;
+  const n=parseInt(localStorage.getItem('sl3_shareHintEntry')||'0',10)+1;
+  localStorage.setItem('sl3_shareHintEntry',String(n));
+  if(n!==3)return;
+  if(document.getElementById('shareHint'))return;
+  const target=document.getElementById('waShareBtn');
+  if(!target)return;
+  localStorage.setItem('sl3_shareHintSeen','1');
+  const hint=document.createElement('div');
+  hint.id='shareHint';hint.className='qa-dots-hint below';
+  hint.textContent='ניתן לשתף רשימה גם מכאן';
+  document.body.appendChild(hint);
+  const place=()=>{
+    const r=target.getBoundingClientRect();
+    hint.style.left=(r.left+r.width/2-hint.offsetWidth/2)+'px';
+    hint.style.top=(r.bottom+10)+'px';
+  };
+  place();requestAnimationFrame(place);setTimeout(place,50);
+  window.addEventListener('resize',place);
+  hint.addEventListener('click',_hideShareHint);
+  setTimeout(_hideShareHint,8000);
+}
 function _maybeShowResetHint(){
   const shown=parseInt(localStorage.getItem('sl3_resetHintShown')||'0',10);
   if(shown>=2)return;
@@ -2269,6 +2297,7 @@ function renderChips(){/* members rendered in more panel on open */}
 
 /* ── WhatsApp share ──────────────────── */
 document.getElementById('waShareBtn').addEventListener('click', function () {
+  localStorage.setItem('sl3_shareHintSeen','1');_hideShareHint();
   const lt   = getLT(activeId);
   const list = activeList();
 
