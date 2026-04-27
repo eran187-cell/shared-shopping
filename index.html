@@ -1358,11 +1358,7 @@ document.getElementById('setupCloseBtn').addEventListener('click',goHome);
 
 // "ספר לחברים" — generic invite link for new users (no house code attached)
 document.getElementById('tellFriendsBtn').addEventListener('click',async function(){
-  const origHTML=this.innerHTML;
-  this.innerHTML='⏳ מקצר...';
-  this.disabled=true;
-  const longUrl=location.href.split('?')[0].split('#')[0];
-  const url=await shortenUrl(longUrl);
+  const url=location.href.split('?')[0].split('#')[0];
   const message='גילית אפליקציית רשימת קניות משותפת לכל המשפחה. כל אחד מוסיף, כולם רואים בזמן אמת. נסו את זה: '+url;
   try{
     await navigator.clipboard.writeText(message);
@@ -1370,8 +1366,6 @@ document.getElementById('tellFriendsBtn').addEventListener('click',async functio
   }catch(_){
     prompt('העתק והדבק את ההודעה הבאה:',message);
   }
-  this.disabled=false;
-  this.innerHTML=origHTML;
 });
 
 // Leave house — stops listener, clears houseId, returns to onboarding
@@ -2345,42 +2339,19 @@ document.getElementById('delConfirm').addEventListener('click',function(){
 
 /* ══ SHARE HOUSE CODE ════════════════════════════════ */
 let shareTimer;
-/* Shorten via TinyURL with localStorage cache + 2s timeout fallback */
-async function shortenUrl(longUrl){
-  const cacheKey='sl3_short_'+longUrl;
-  const cached=localStorage.getItem(cacheKey);
-  // Validate cached: must be a single clean URL with no whitespace
-  if(cached && /^https?:\/\/\S+$/.test(cached) && !/\s/.test(cached))return cached;
-  if(cached)localStorage.removeItem(cacheKey); // poisoned, drop it
-  try{
-    const ctrl=new AbortController();
-    const timer=setTimeout(()=>ctrl.abort(),2000);
-    const res=await fetch('https://tinyurl.com/api-create.php?url='+encodeURIComponent(longUrl),{signal:ctrl.signal});
-    clearTimeout(timer);
-    if(!res.ok)throw 0;
-    // Extract only the first token to be safe against any trailing junk
-    const raw=(await res.text()).trim();
-    const short=raw.split(/\s+/)[0];
-    if(/^https?:\/\/\S+$/.test(short)){
-      localStorage.setItem(cacheKey,short);
-      return short;
-    }
-    throw 0;
-  }catch(_){
-    return longUrl; // graceful fallback
+// One-time cleanup of any cached TinyURLs from earlier versions.
+try{
+  for(let i=localStorage.length-1;i>=0;i--){
+    const k=localStorage.key(i);
+    if(k&&k.indexOf('sl3_short_')===0)localStorage.removeItem(k);
   }
-}
+}catch(_){}
 
 document.getElementById('shareBtn').addEventListener('click',async function(){
   if(!houseId)return;
-  const longUrl=location.href.split('?')[0].split('#')[0]+'?h='+houseId;
+  const url=location.href.split('?')[0].split('#')[0]+'?h='+houseId;
   const origHTML=this.innerHTML;
-  this.innerHTML='<span class="share-icon">⏳</span> מקצר קישור...';
-  const url=await shortenUrl(longUrl);
-  // Build message and defensively collapse any accidental duplicates of the URL
-  let message='פתחתי את אפליקציית הקניות המשותפות לבית, מוזמנים להצטרף מהקישור הבא:\n'+url;
-  const escUrl=url.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  message=message.replace(new RegExp('('+escUrl+')(\\s*\\1)+','g'),'$1');
+  const message='פתחתי את אפליקציית הקניות המשותפות לבית, מוזמנים להצטרף מהקישור הבא:\n'+url;
   this.innerHTML='<span class="share-icon">✓</span> נפתח וואטסאפ...';
   this.classList.add('copy-ok');
   clearTimeout(shareTimer);
