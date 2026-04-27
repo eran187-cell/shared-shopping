@@ -2167,7 +2167,7 @@ function _hideDotsHint(){
   if(h)h.remove();
 }
 function _maybeShowDotsHint(){
-  if(localStorage.getItem('sl3_dotsHintSeen'))return;
+  if(localStorage.getItem('sl3_dotsHintSeen_v2'))return;
   if(document.getElementById('qaDotsHint'))return;
   const dots=document.getElementById('qaDots');
   if(!dots)return;
@@ -2182,11 +2182,11 @@ function _maybeShowDotsHint(){
   };
   place();requestAnimationFrame(place);setTimeout(place,50);
   window.addEventListener('resize',place);
-  hint.addEventListener('click',()=>{localStorage.setItem('sl3_dotsHintSeen','1');_hideDotsHint();});
-  setTimeout(()=>{localStorage.setItem('sl3_dotsHintSeen','1');_hideDotsHint();},8000);
+  hint.addEventListener('click',()=>{localStorage.setItem('sl3_dotsHintSeen_v2','1');_hideDotsHint();});
+  setTimeout(()=>{localStorage.setItem('sl3_dotsHintSeen_v2','1');_hideDotsHint();},8000);
 }
 document.getElementById('qaDots').addEventListener('click',function(){
-  localStorage.setItem('sl3_dotsHintSeen','1');_hideDotsHint();
+  localStorage.setItem('sl3_dotsHintSeen_v2','1');_hideDotsHint();
   const more=document.getElementById('qaMore');
   const isOpen=more.classList.contains('open');
   if(isOpen){
