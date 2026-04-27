@@ -1225,14 +1225,6 @@ function renderMemberList(){
     const wrap=document.createElement('div');
     wrap.className='mem-inp-wrap';
 
-    if(isMine){
-      const phoneIcon=document.createElement('span');
-      phoneIcon.textContent='📱';
-      phoneIcon.title='המכשיר שלי';
-      phoneIcon.style.cssText='font-size:18px;line-height:1;flex:0 0 auto;align-self:center';
-      wrap.appendChild(phoneIcon);
-    }
-
     const inp=document.createElement('input');
     inp.className='mem-name-inp';inp.type='text';
     inp.value=m.name;inp.placeholder='שם השותף';
@@ -1278,7 +1270,15 @@ function renderMemberList(){
       wrap.appendChild(del);
     }
 
-    row.appendChild(av);row.appendChild(wrap);
+    row.appendChild(av);
+    if(isMine){
+      const phoneIcon=document.createElement('span');
+      phoneIcon.textContent='📱';
+      phoneIcon.title='המכשיר שלי';
+      phoneIcon.style.cssText='font-size:22px;line-height:1;flex:0 0 auto;margin:0 -4px';
+      row.appendChild(phoneIcon);
+    }
+    row.appendChild(wrap);
     list.appendChild(row);
   });
 
