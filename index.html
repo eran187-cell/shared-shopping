@@ -340,6 +340,7 @@ a,button,input,select{touch-action:manipulation}
   content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);
   width:10px;height:10px;background:#2dba7a;
 }
+.qa-dots-hint.below::after{bottom:auto;top:-6px}
 @keyframes hintPop{from{opacity:0;transform:translateY(6px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes hintBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 /* Autocomplete */
@@ -1681,6 +1682,7 @@ function openList(id){
   document.getElementById('list').classList.remove('slide-right');
   document.getElementById('qabar').classList.add('visible');
   _maybeShowDotsHint();
+  _maybeShowResetHint();
   // NOTE: deliberately NOT focusing qaInput on entry — opening the keyboard
   // automatically hides the list and feels intrusive. User taps the input
   // when they want to add.
@@ -2161,6 +2163,31 @@ function _hideDotsHint(){
   const h=document.getElementById('qaDotsHint');
   if(h)h.remove();
 }
+function _hideResetHint(){
+  const h=document.getElementById('resetHint');
+  if(h)h.remove();
+}
+function _maybeShowResetHint(){
+  const shown=parseInt(localStorage.getItem('sl3_resetHintShown')||'0',10);
+  if(shown>=2)return;
+  if(document.getElementById('resetHint'))return;
+  const target=document.getElementById('resetListBtn');
+  if(!target)return;
+  localStorage.setItem('sl3_resetHintShown',String(shown+1));
+  const hint=document.createElement('div');
+  hint.id='resetHint';hint.className='qa-dots-hint below';
+  hint.textContent='לאיפוס הסימונים';
+  document.body.appendChild(hint);
+  const place=()=>{
+    const r=target.getBoundingClientRect();
+    hint.style.left=(r.left+r.width/2-hint.offsetWidth/2)+'px';
+    hint.style.top=(r.bottom+10)+'px';
+  };
+  place();requestAnimationFrame(place);setTimeout(place,50);
+  window.addEventListener('resize',place);
+  hint.addEventListener('click',_hideResetHint);
+  setTimeout(_hideResetHint,8000);
+}
 function _maybeShowDotsHint(){
   if(localStorage.getItem('sl3_dotsHintSeen_v2'))return;
   if(document.getElementById('qaDotsHint'))return;
@@ -2312,6 +2339,7 @@ document.getElementById('listTitle').addEventListener('keydown', function(e) {
 
 /* ── Reset list ──────────────────────── */
 document.getElementById('resetListBtn').addEventListener('click',function(){
+  localStorage.setItem('sl3_resetHintShown','2');_hideResetHint();
   const list=activeList();
   if(!list.some(i=>i.checked)){toast('אין פריטים מסומנים לאיפוס');return;}
   list.forEach(i=>i.checked=false);
