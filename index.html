@@ -1189,10 +1189,9 @@ function renderMemberList(){
     const canEditThisRow=admin||isMine;
     const claimable=isUnclaimed() && !m.deviceId;
     if(isMine){
-      row.style.background='rgba(45,186,122,.10)';
-      row.style.border='1.5px solid var(--pri)';
+      row.style.background='rgba(45,186,122,.18)';
+      row.style.boxShadow='inset 0 0 0 2px var(--pri)';
       row.style.borderRadius='10px';
-      row.style.padding='6px';
     }
 
     const av=document.createElement('div');
@@ -1225,6 +1224,14 @@ function renderMemberList(){
 
     const wrap=document.createElement('div');
     wrap.className='mem-inp-wrap';
+
+    if(isMine){
+      const phoneIcon=document.createElement('span');
+      phoneIcon.textContent='📱';
+      phoneIcon.title='המכשיר שלי';
+      phoneIcon.style.cssText='font-size:18px;line-height:1;flex:0 0 auto;align-self:center';
+      wrap.appendChild(phoneIcon);
+    }
 
     const inp=document.createElement('input');
     inp.className='mem-name-inp';inp.type='text';
@@ -1260,13 +1267,6 @@ function renderMemberList(){
       });
     }
     wrap.appendChild(badge);
-
-    if(isMine){
-      const me=document.createElement('span');
-      me.textContent='📱 זה המכשיר שלי';
-      me.style.cssText='font-size:11px;font-weight:700;color:var(--pri);background:#fff;border:1px solid var(--pri);border-radius:8px;padding:3px 7px;margin-right:4px;white-space:nowrap';
-      wrap.appendChild(me);
-    }
 
     if(admin){
       const del=document.createElement('button');
