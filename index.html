@@ -643,18 +643,6 @@ a,button,input,select{touch-action:manipulation}
   </div>
 </div>
 
-<!-- Campaign popup -->
-<div id="campOverlay" class="overlay">
-  <div class="sheet" style="max-width:380px">
-    <button id="campCloseBtn" type="button" style="position:absolute;top:8px;left:12px;background:none;border:none;font-size:22px;color:var(--mut);cursor:pointer;padding:4px 10px">✕</button>
-    <div style="text-align:center;font-size:30px;margin-top:6px">📣</div>
-    <p id="campMsg" style="font-size:15px;line-height:1.55;color:var(--txt);text-align:center;margin:10px 4px 14px;white-space:pre-wrap"></p>
-    <div id="campProgress" style="height:3px;background:var(--bdr);border-radius:2px;overflow:hidden">
-      <div id="campProgressBar" style="height:100%;background:var(--pri);width:100%;transition:width 7s linear"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ══ HOME VIEW ══════════════════════════════════ -->
 <div class="view hidden" id="home">
   <div class="topbar">
@@ -879,20 +867,6 @@ a,button,input,select{touch-action:manipulation}
     </div>
 
     <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
-      <h3 style="margin:0 0 10px 0;font-size:15px">📣 קמפיין הודעות</h3>
-      <textarea id="campText" maxlength="200" placeholder="טקסט ההודעה (עד 200 תווים)" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;min-height:60px;margin-bottom:8px"></textarea>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;font-size:13px">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="campTarget" value="all" checked/> כולם</label>
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="campTarget" value="codes"/> קודי בתים ספציפיים</label>
-        <input id="campCodes" type="text" placeholder="ABC123, DEF456, ..." style="margin-right:22px;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-family:monospace;font-size:12px"/>
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="campTarget" value="newDays"/> בתים שנוצרו ב-X ימים אחרונים</label>
-        <input id="campDays" type="number" min="1" max="90" value="7" style="margin-right:22px;width:80px;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:12px"/>
-      </div>
-      <button id="campSend" style="padding:10px 14px;border:none;border-radius:8px;background:var(--pri);color:#fff;font-weight:600;font-size:13px;cursor:pointer;width:100%;margin-bottom:10px">📨 שלח קמפיין</button>
-      <div id="campList" style="font-size:13px"></div>
-    </div>
-
-    <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
       <h3 style="margin:0 0 10px 0;font-size:15px">🔥 20 הפריטים הנפוצים ביותר</h3>
       <div id="adminTopItems"></div>
     </div>
@@ -1043,57 +1017,6 @@ function recordItemStat(name){
     else if(committed)console.log('[stats item] OK',snap.val());
   });
 }
-// ── Campaigns: show the most recent matching campaign as a popup
-async function maybeShowCampaign(){
-  if(!houseId)return;
-  if(document.getElementById('campOverlay').classList.contains('open'))return;
-  try{
-    const snap=await db.ref('campaigns').once('value');
-    const all=snap.val()||{};
-    const dismissed=JSON.parse(localStorage.getItem('sl3_campDismissed')||'[]');
-    let myHouseStat=null;
-    for(const [id,c] of Object.entries(all).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0))){
-      if(dismissed.includes(id))continue;
-      if(c.target==='all'){
-        showCampaignPopup(id,c.text);return;
-      }
-      if(c.target==='codes' && Array.isArray(c.codes) && c.codes.includes(houseId.toUpperCase())){
-        showCampaignPopup(id,c.text);return;
-      }
-      if(c.target==='newDays'){
-        if(myHouseStat===null){
-          const hash=await _getHouseHash();
-          const hsnap=await db.ref('stats/houses/'+hash).once('value');
-          myHouseStat=hsnap.val()||{};
-        }
-        if(myHouseStat.cr){
-          const cutoff=Date.now()-(c.days||7)*86400000;
-          if(myHouseStat.cr>=cutoff){showCampaignPopup(id,c.text);return;}
-        }
-      }
-    }
-  }catch(err){console.warn('[campaign]',err);}
-}
-let _campTimer=null;
-function showCampaignPopup(id,text){
-  document.getElementById('campMsg').textContent=text;
-  const overlay=document.getElementById('campOverlay');
-  const bar=document.getElementById('campProgressBar');
-  bar.style.transition='none';bar.style.width='100%';
-  overlay.classList.add('open');
-  // animate countdown
-  requestAnimationFrame(()=>{bar.style.transition='width 7s linear';bar.style.width='0%';});
-  const dismiss=()=>{
-    if(_campTimer){clearTimeout(_campTimer);_campTimer=null;}
-    overlay.classList.remove('open');
-    const arr=JSON.parse(localStorage.getItem('sl3_campDismissed')||'[]');
-    if(!arr.includes(id))arr.push(id);
-    // keep last 50 ids only
-    localStorage.setItem('sl3_campDismissed',JSON.stringify(arr.slice(-50)));
-  };
-  document.getElementById('campCloseBtn').onclick=dismiss;
-  _campTimer=setTimeout(dismiss,7000);
-}
 function recordLogin(){
   if(!houseId)return;
   try{
@@ -1168,7 +1091,6 @@ function connectToHouse(id,cb,errCb){
     localStorage.setItem('sl3_houseId',id);
     startListener(id);
     recordLogin();
-    setTimeout(maybeShowCampaign,1500);
     if(cb)cb(!!d);
   },err=>{
     if(errCb)errCb(err);
@@ -2937,62 +2859,6 @@ async function adminResetClaims(code,name){
   }
 }
 document.getElementById('adminDelHouseBtn').addEventListener('click',adminDeleteHouseByCode);
-
-/* ── Campaign management (admin) ────────────────────── */
-async function loadCampaigns(){
-  try{
-    const snap=await db.ref('campaigns').once('value');
-    const all=snap.val()||{};
-    const entries=Object.entries(all).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
-    const listEl=document.getElementById('campList');
-    if(!entries.length){listEl.innerHTML='<div style="color:var(--mut);text-align:center;padding:8px">אין קמפיינים פעילים.</div>';return;}
-    listEl.innerHTML='<div style="font-size:12px;color:var(--mut);margin-bottom:6px">פעילים:</div>'
-      +entries.map(([id,c])=>{
-        let targetLabel='כולם';
-        if(c.target==='codes')targetLabel='קודים: '+(c.codes||[]).join(', ');
-        else if(c.target==='newDays')targetLabel='בתים מ-'+c.days+' ימים אחרונים';
-        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:8px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;margin-bottom:6px">'
-          +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+esc(c.text||'')+'</div>'
-          +'<div style="font-size:11px;color:var(--mut);margin-top:4px">🎯 '+esc(targetLabel)+' • נוצר '+new Date(c.createdAt||0).toLocaleString('he-IL')+'</div></div>'
-          +'<button data-camp-del="'+id+'" style="background:#e74c3c;border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;padding:0">🗑</button>'
-          +'</div>';
-      }).join('');
-    listEl.querySelectorAll('[data-camp-del]').forEach(b=>{
-      b.addEventListener('click',async()=>{
-        if(!confirm('למחוק את הקמפיין?'))return;
-        await db.ref('campaigns/'+b.dataset.campDel).remove();
-        loadCampaigns();
-      });
-    });
-  }catch(err){console.error('[campaigns load]',err);}
-}
-document.getElementById('campSend').addEventListener('click',async function(){
-  const text=document.getElementById('campText').value.trim();
-  if(!text){alert('יש להזין טקסט');return;}
-  const target=document.querySelector('input[name="campTarget"]:checked').value;
-  const payload={text,target,createdAt:Date.now()};
-  if(target==='codes'){
-    const raw=document.getElementById('campCodes').value.trim();
-    const codes=raw.split(/[,\s]+/).map(c=>c.trim().toUpperCase()).filter(c=>c.length>=4&&c.length<=12);
-    if(!codes.length){alert('הזן לפחות קוד אחד תקין');return;}
-    payload.codes=codes;
-  } else if(target==='newDays'){
-    const d=parseInt(document.getElementById('campDays').value,10);
-    if(!d||d<1){alert('מספר ימים לא תקין');return;}
-    payload.days=d;
-  }
-  this.disabled=true;this.textContent='שולח...';
-  try{
-    const id='c_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-    await db.ref('campaigns/'+id).set(payload);
-    document.getElementById('campText').value='';
-    document.getElementById('campCodes').value='';
-    loadCampaigns();
-  }catch(err){alert('שליחה נכשלה: '+(err.message||err.code||err));}
-  this.disabled=false;this.textContent='📨 שלח קמפיין';
-});
-// load on admin entry
-loadCampaigns();
 document.getElementById('adminDelCode').addEventListener('keydown',e=>{
   if(e.key==='Enter')adminDeleteHouseByCode();
 });
