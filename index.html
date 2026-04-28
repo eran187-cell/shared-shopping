@@ -976,18 +976,22 @@ async function recordHouseStat(){
     const totalItems=Object.values(items||{}).reduce((n,a)=>n+(a?.length||0),0);
     const doneItems=Object.values(items||{}).reduce((n,a)=>n+(a?.filter(x=>x.checked).length||0),0);
     const cleanName=(house.name||'').trim().slice(0,40);
-    const payload={
-      c:houseId, // expose code so admin dashboard can manage by row click
-      m:(house.members||[]).length,
-      i:totalItems,
-      d:doneItems,
-      l:(listTypes||[]).length,
-      t:Date.now()
-    };
-    if(cleanName)payload.n=cleanName;
-    console.log('[stats house] writing',hash,payload);
-    db.ref('stats/houses/'+hash).set(payload)
-      .then(()=>console.log('[stats house] OK'))
+    const now=Date.now();
+    console.log('[stats house] writing',hash);
+    db.ref('stats/houses/'+hash).transaction(curr=>{
+      const next={
+        c:houseId,
+        m:(house.members||[]).length,
+        i:totalItems,
+        d:doneItems,
+        l:(listTypes||[]).length,
+        t:now,
+        cr:(curr&&curr.cr)||now // preserve creation time on subsequent writes
+      };
+      if(cleanName)next.n=cleanName;
+      else if(curr&&curr.n)next.n=curr.n; // keep last known name if blank
+      return next;
+    }).then(()=>console.log('[stats house] OK'))
       .catch(err=>console.error('[stats house] FAILED:',err.code,err.message));
   }catch(e){console.error('[stats house] hash failed',e);}
 }
@@ -2668,7 +2672,9 @@ async function loadAdminStats(){
     const logins=s.logins||{};
 
     // ── aggregate totals
-    let totalFamilies=0,totalUsers=0,totalItems=0,totalDone=0,totalLists=0,latestUpdate=0;
+    let totalFamilies=0,totalUsers=0,totalItems=0,totalDone=0,totalLists=0,latestUpdate=0,newToday=0;
+    const startOfToday=new Date();startOfToday.setHours(0,0,0,0);
+    const startMs=startOfToday.getTime();
     Object.values(houses).forEach(h=>{
       totalFamilies++;
       totalUsers+=(h.m||0);
@@ -2676,6 +2682,7 @@ async function loadAdminStats(){
       totalDone+=(h.d||0);
       totalLists+=(h.l||0);
       if((h.t||0)>latestUpdate)latestUpdate=h.t;
+      if(h.cr && h.cr>=startMs)newToday++;
     });
 
     // ── today's logins
@@ -2694,6 +2701,7 @@ async function loadAdminStats(){
     // ── summary tiles
     document.getElementById('adminSummary').innerHTML=[
       ['👨‍👩‍👧',totalFamilies,'בתים'],
+      ['🆕',newToday,'בתים חדשים היום'],
       ['👥',totalUsers,'משתמשים'],
       ['🛒',totalItems,'פריטים פעילים'],
       ['✅',totalDone,'הושלמו'],
@@ -2733,9 +2741,12 @@ async function loadAdminStats(){
         const displayName=hasName?esc(h.n):'<span style="color:var(--mut);font-style:italic">בית #'+hash.slice(0,6)+'</span>';
         const code=h.c||'';
         const codeChip=code?'<code style="font-size:10px;background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--mut);margin-right:4px">'+esc(code)+'</code>':'';
-        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr)">'
+        const isNewToday=h.cr && h.cr>=startMs;
+        const newBadge=isNewToday?'<span style="font-size:10px;font-weight:700;background:var(--pri);color:#fff;padding:2px 6px;border-radius:6px;margin-right:4px">חדש</span>':'';
+        const rowBg=isNewToday?'background:rgba(45,186,122,.10);':'';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr);'+rowBg+'">'
           +'<span style="font-size:12px;color:var(--mut);min-width:24px;text-align:center">'+(i+1)+'</span>'
-          +'<span style="font-size:14px;font-weight:600;flex:1;display:flex;align-items:center;gap:4px">'+displayName+codeChip+'</span>'
+          +'<span style="font-size:14px;font-weight:600;flex:1;display:flex;align-items:center;gap:4px">'+newBadge+displayName+codeChip+'</span>'
           +'<span style="font-size:12px;color:var(--mut)">👥 '+(h.m||0)+'</span>'
           +'<span style="font-size:12px;color:var(--mut)">🛒 '+(h.i||0)+'</span>'
           +'<span style="font-size:11px;color:'+ageColor+';min-width:70px;text-align:left">'+ageLabel+'</span>'
