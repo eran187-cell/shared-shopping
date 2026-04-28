@@ -643,22 +643,6 @@ a,button,input,select{touch-action:manipulation}
   </div>
 </div>
 
-<!-- ══ HELP BOT (visible during onboarding) ══════════════════ -->
-<button id="helpFab" type="button" style="display:none;position:fixed;bottom:calc(20px + var(--sab));right:16px;z-index:6000;background:var(--pri);color:#fff;border:none;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 6px 22px rgba(45,186,122,.45);display:flex;align-items:center;gap:8px">
-  <span style="font-size:20px">🤖</span> לא בטוח? אני כאן לעזור
-</button>
-
-<div id="helpOverlay" class="overlay">
-  <div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--pri);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px">🤖</div>
-      <h3 style="margin:0;flex:1">העוזר שלי</h3>
-      <button id="helpClose" type="button" style="background:none;border:none;font-size:22px;color:var(--mut);cursor:pointer;padding:4px 10px">✕</button>
-    </div>
-    <div id="helpChat" style="flex:1;overflow-y:auto;padding:8px 4px;min-height:200px"></div>
-  </div>
-</div>
-
 <!-- ══ HOME VIEW ══════════════════════════════════ -->
 <div class="view hidden" id="home">
   <div class="topbar">
@@ -1168,7 +1152,6 @@ let editMembers=[]; // working copy
 
 function openSetup(mode){
   setupMode=mode;
-  setTimeout(_showHelpFab,0);
   // copy members for editing
   editMembers=house.members.map(m=>({...m}));
 
@@ -1428,104 +1411,6 @@ document.getElementById('supportBtn').addEventListener('click',function(){
   const code=houseId||'ללא בית';
   const subject='תמיכה - בית '+code+' - '+device;
   location.href='mailto:comigo2022@gmail.com?subject='+encodeURIComponent(subject);
-});
-
-// ── Help bot — scripted decision tree shown on the onboarding screen
-const HELP_TREE={
-  root:{
-    bot:'היי 👋 אני כאן כדי לעזור בכמה צעדים. מה תרצו לדעת?',
-    options:[
-      {label:'מה זה האפליקציה?',next:'what'},
-      {label:'איך מצטרפים לבית קיים?',next:'join'},
-      {label:'איך פותחים בית חדש?',next:'create'},
-      {label:'מה ההבדל בין שיתוף קישור לבין קוד בית?',next:'codeVsLink'}
-    ]
-  },
-  what:{
-    bot:'זו רשימת קניות משותפת לבני המשפחה. כל אחד מוסיף פריטים מהטלפון שלו, וכולם רואים את הרשימה מתעדכנת בזמן אמת. אפשר לפתוח כמה רשימות (סופר, פארם, בית, וכו), לסמן הושלם, ולשתף את הרשימה לוואטסאפ.',
-    options:[
-      {label:'איך פותחים בית חדש?',next:'create'},
-      {label:'איך מצטרפים לבית קיים?',next:'join'},
-      {label:'תפריט ראשי',next:'root'}
-    ]
-  },
-  join:{
-    bot:'הדרך הכי פשוטה: בקשו ממישהו שכבר חבר בבית לשלוח לכם קישור הצטרפות (הוא יכול לעשות את זה מתוך עמוד ההגדרות שלו). לוחצים על הקישור והאפליקציה תשאל אם להצטרף לבית.',
-    options:[
-      {label:'אין לי קישור, רק קוד',next:'codeOnly'},
-      {label:'תפריט ראשי',next:'root'}
-    ]
-  },
-  codeOnly:{
-    bot:'אם יש לכם קוד בית (4 עד 12 תווים): בעמוד הזה הקלידו את הקוד למטה, לחצו "הצטרפות לבית" ותהיו מחוברים מיד. כל המכשירים בבית יראו את אותן הרשימות.',
-    options:[
-      {label:'אין לי גם קוד',next:'create'},
-      {label:'תפריט ראשי',next:'root'}
-    ]
-  },
-  create:{
-    bot:'שלוש דקות עבודה: 1) ממלאים שם בית (למשל "משפחת לוי"). 2) מוסיפים את שמות בני המשפחה. 3) לוחצים "בואו נתחיל". נוצר קוד בית אוטומטית, ומכאן אפשר לשתף קישור הצטרפות לכל אחד שתרצו.',
-    options:[
-      {label:'ההבדל בין קישור לקוד?',next:'codeVsLink'},
-      {label:'תפריט ראשי',next:'root'}
-    ]
-  },
-  codeVsLink:{
-    bot:'שניהם פותחים את אותו בית. הקישור פותח את האפליקציה ישירות עם חיבור אוטומטי - הכי נוח. הקוד הוא 4-12 תווים שאפשר להקליד ידנית אם הקישור נשבר או לא נפתח. גם וגם פועלים, הקישור פשוט יותר.',
-    options:[
-      {label:'תפריט ראשי',next:'root'}
-    ]
-  }
-};
-function _helpAddBubble(text,isBot){
-  const chat=document.getElementById('helpChat');
-  const b=document.createElement('div');
-  b.style.cssText='max-width:85%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5;margin:6px 0;'
-    +(isBot?'background:var(--pril);color:var(--txt);align-self:flex-start;border-top-left-radius:4px':'background:var(--pri);color:#fff;align-self:flex-end;border-top-right-radius:4px;margin-left:auto');
-  b.textContent=text;
-  chat.appendChild(b);
-  chat.scrollTop=chat.scrollHeight;
-  return b;
-}
-function _helpRender(stepKey){
-  const chat=document.getElementById('helpChat');
-  // remove previous option buttons (keep prior bubbles)
-  chat.querySelectorAll('.help-opts').forEach(n=>n.remove());
-  const step=HELP_TREE[stepKey];
-  if(!step)return;
-  _helpAddBubble(step.bot,true);
-  const opts=document.createElement('div');
-  opts.className='help-opts';
-  opts.style.cssText='display:flex;flex-direction:column;gap:6px;margin:8px 0';
-  step.options.forEach(o=>{
-    const btn=document.createElement('button');
-    btn.type='button';
-    btn.textContent=o.label;
-    btn.style.cssText='padding:10px 12px;border-radius:10px;border:1.5px solid var(--pri);background:var(--sur);color:var(--pri);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-align:right';
-    btn.addEventListener('click',()=>{
-      _helpAddBubble(o.label,false);
-      opts.remove();
-      setTimeout(()=>_helpRender(o.next),200);
-    });
-    opts.appendChild(btn);
-  });
-  chat.appendChild(opts);
-  chat.scrollTop=chat.scrollHeight;
-}
-function _showHelpFab(){
-  // Visible only on onboarding (when no house yet, in setup mode)
-  const fab=document.getElementById('helpFab');
-  if(!fab)return;
-  const onSetup=setupMode==='setup'&&!houseId;
-  fab.style.display=onSetup?'flex':'none';
-}
-document.getElementById('helpFab').addEventListener('click',function(){
-  document.getElementById('helpChat').innerHTML='';
-  _helpRender('root');
-  document.getElementById('helpOverlay').classList.add('open');
-});
-document.getElementById('helpClose').addEventListener('click',function(){
-  document.getElementById('helpOverlay').classList.remove('open');
 });
 
 // About / privacy overlay
@@ -1864,7 +1749,6 @@ function goHome(){
   document.getElementById('setup').classList.add('slide-right');
   document.getElementById('home').classList.remove('hidden');
   document.getElementById('qabar').classList.remove('visible');
-  document.getElementById('helpFab').style.display='none';
   renderHome();
 }
 document.getElementById('backBtn').addEventListener('click',goHome);
