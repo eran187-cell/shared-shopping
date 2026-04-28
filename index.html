@@ -1380,7 +1380,7 @@ document.getElementById('setupCloseBtn').addEventListener('click',goHome);
 // "ספר לחברים" — generic invite link for new users (no house code attached)
 document.getElementById('tellFriendsBtn').addEventListener('click',async function(){
   const url=location.href.split('?')[0].split('#')[0];
-  const message='גילית אפליקציית רשימת קניות משותפת לכל המשפחה. כל אחד מוסיף, כולם רואים בזמן אמת. נסו את זה: '+url;
+  const message='אפליקציית רשימת קניות משותפת לכל המשפחה. כל אחד מוסיף, כולם רואים בזמן אמת. הצטרפו לראשונים שמתנסים בפיילוט: '+url;
   try{
     await navigator.clipboard.writeText(message);
     toast('הקישור הועתק, ניתן לשתף עם החברים');
