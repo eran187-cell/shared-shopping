@@ -618,8 +618,10 @@ a,button,input,select{touch-action:manipulation}
       <div class="house-code-hint">לשימוש ידני, אם הקישור לא עובד</div>
     </div>
 
-    <a href="mailto:comigo2022@gmail.com?subject=תמיכה" style="color:var(--mut);font-size:12px;text-decoration:underline;padding:14px 0 4px;display:block;text-align:center;font-family:inherit">לתמיכה / רעיונות והצעות</a>
-    <button id="aboutLink" type="button" style="background:none;border:none;color:var(--mut);font-size:12px;text-decoration:underline;cursor:pointer;padding:4px 0 14px;font-family:inherit;display:block;margin:0 auto">מידע ופרטיות</button>
+    <button id="supportBtn" type="button" style="margin-top:16px;width:100%;padding:14px;border:1.5px solid var(--pri);border-radius:12px;background:var(--pril);color:var(--pri);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+      <span style="font-size:18px">✉️</span> לתמיכה / רעיונות והצעות
+    </button>
+    <button id="aboutLink" type="button" style="background:none;border:none;color:var(--mut);font-size:12px;text-decoration:underline;cursor:pointer;padding:14px 0;font-family:inherit;display:block;margin:0 auto">מידע ופרטיות</button>
   </div>
 </div>
 
@@ -1388,6 +1390,23 @@ document.getElementById('tellFriendsBtn').addEventListener('click',async functio
   }catch(_){
     prompt('העתק והדבק את ההודעה הבאה:',message);
   }
+});
+
+// Support button — open mail app with house code + device info in subject
+document.getElementById('supportBtn').addEventListener('click',function(){
+  const ua=navigator.userAgent;
+  let device='לא ידוע';
+  if(/iPad/.test(ua))device='iPad';
+  else if(/iPhone/.test(ua))device='iPhone';
+  else if(/Android/.test(ua)){
+    const m=ua.match(/Android[^;]*;\s*([^)]+?)(?:Build|\))/);
+    device=m?'Android ('+m[1].trim()+')':'Android';
+  }
+  else if(/Macintosh/.test(ua))device='Mac';
+  else if(/Windows/.test(ua))device='Windows';
+  const code=houseId||'ללא בית';
+  const subject='תמיכה - בית '+code+' - '+device;
+  location.href='mailto:comigo2022@gmail.com?subject='+encodeURIComponent(subject);
 });
 
 // About / privacy overlay
