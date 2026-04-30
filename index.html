@@ -867,6 +867,16 @@ a,button,input,select{touch-action:manipulation}
     </div>
 
     <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
+      <h3 style="margin:0 0 10px 0;font-size:15px">📣 לחצו על "ספר לחברים"</h3>
+      <div id="adminTellFriends"></div>
+    </div>
+
+    <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
+      <h3 style="margin:0 0 10px 0;font-size:15px">📲 התקנות אפליקציה</h3>
+      <div id="adminInstalls"></div>
+    </div>
+
+    <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">
       <h3 style="margin:0 0 10px 0;font-size:15px">🔥 20 הפריטים הנפוצים ביותר</h3>
       <div id="adminTopItems"></div>
     </div>
@@ -990,10 +1000,25 @@ async function recordHouseStat(){
       };
       if(cleanName)next.n=cleanName;
       else if(curr&&curr.n)next.n=curr.n; // keep last known name if blank
+      // preserve incremental counters managed by _bumpHouseStat
+      ['tf','ic','iac','icp'].forEach(k=>{if(curr&&typeof curr[k]==='number')next[k]=curr[k];});
       return next;
     }).then(()=>console.log('[stats house] OK'))
       .catch(err=>console.error('[stats house] FAILED:',err.code,err.message));
   }catch(e){console.error('[stats house] hash failed',e);}
+}
+// Increment a per-house counter (tf=tellFriends, ic=install click, iac=install accepted, icp=install completed)
+async function _bumpHouseStat(field){
+  if(!houseId)return;
+  try{
+    const hash=await _getHouseHash();
+    db.ref('stats/houses/'+hash).transaction(curr=>{
+      if(!curr)return curr; // abort: can't satisfy the validate rule from scratch here
+      const next={...curr};
+      next[field]=(next[field]||0)+1;
+      return next;
+    }).catch(err=>console.warn('[stats bump]',field,err.code||err.message));
+  }catch(e){console.warn('[stats bump]',e);}
 }
 function _safeItemKey(name){
   // Firebase keys can't contain . # $ [ ] /
@@ -1386,6 +1411,7 @@ document.getElementById('setupCloseBtn').addEventListener('click',goHome);
 
 // "ספר לחברים" — generic invite link for new users (no house code attached)
 document.getElementById('tellFriendsBtn').addEventListener('click',async function(){
+  _bumpHouseStat('tf');
   const url=location.href.split('?')[0].split('#')[0];
   const message='אפליקציית רשימת קניות משותפת לכל המשפחה. כל אחד מוסיף, כולם רואים בזמן אמת. הצטרפו לראשונים שמתנסים בפיילוט: '+url;
   try{
@@ -2496,6 +2522,7 @@ window.addEventListener('beforeinstallprompt',e=>{
 window.addEventListener('appinstalled',()=>{
   _installPrompt=null;
   localStorage.setItem('sl3_installed','1');
+  _bumpHouseStat('icp');
   _refreshInstallBtns();
   toast('האפליקציה נוספה לדף הבית ✓');
 });
@@ -2528,10 +2555,14 @@ function _refreshInstallBtns(){
 
 function showInstallFlow(){
   if(_isStandalone())return;
+  _bumpHouseStat('ic');
   if(_installPrompt){
     // Android/Chrome — native prompt
     _installPrompt.prompt();
-    _installPrompt.userChoice.then(()=>{_installPrompt=null;_refreshInstallBtns();});
+    _installPrompt.userChoice.then(choice=>{
+      if(choice && choice.outcome==='accepted')_bumpHouseStat('iac');
+      _installPrompt=null;_refreshInstallBtns();
+    });
     return;
   }
   const ua=navigator.userAgent;
@@ -2764,6 +2795,53 @@ async function loadAdminStats(){
       });
     } else {
       listEl.innerHTML='<div style="text-align:center;color:var(--mut);padding:20px">אין עדיין נתוני בתים.</div>';
+    }
+
+    // ── tell-friends + install panels
+    const houseRows=Object.entries(houses).map(([hash,h])=>({hash,h}));
+    const tfRows=houseRows.filter(r=>r.h.tf).sort((a,b)=>(b.h.tf||0)-(a.h.tf||0));
+    const tfTotal=tfRows.reduce((n,r)=>n+(r.h.tf||0),0);
+    const renderHouseRow=(r,countField,label)=>{
+      const c=r.h[countField]||0;
+      const code=r.h.c||'';
+      const name=r.h.n&&r.h.n.trim()?esc(r.h.n):'<span style="color:var(--mut);font-style:italic">בית #'+r.hash.slice(0,6)+'</span>';
+      const codeChip=code?'<code style="font-size:10px;background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--mut);margin-right:4px">'+esc(code)+'</code>':'';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bdr)">'
+        +'<span style="font-size:14px;flex:1">'+name+codeChip+'</span>'
+        +'<span style="font-size:13px;font-weight:700;color:var(--pri);min-width:36px;text-align:left">'+c+'</span>'
+        +'</div>';
+    };
+    const tfEl=document.getElementById('adminTellFriends');
+    if(tfRows.length){
+      tfEl.innerHTML='<div style="font-size:13px;color:var(--mut);margin-bottom:8px">סה"כ <strong style="color:var(--pri)">'+tfTotal+'</strong> לחיצות מ-'+tfRows.length+' בתים:</div>'
+        +tfRows.map(r=>renderHouseRow(r,'tf')).join('');
+    } else {
+      tfEl.innerHTML='<div style="text-align:center;color:var(--mut);padding:20px">עדיין אין לחיצות.</div>';
+    }
+    // installs panel
+    const icRows=houseRows.filter(r=>r.h.ic||r.h.iac||r.h.icp);
+    const icTotal=houseRows.reduce((n,r)=>n+(r.h.ic||0),0);
+    const iacTotal=houseRows.reduce((n,r)=>n+(r.h.iac||0),0);
+    const icpTotal=houseRows.reduce((n,r)=>n+(r.h.icp||0),0);
+    const instEl=document.getElementById('adminInstalls');
+    if(icRows.length){
+      instEl.innerHTML='<div style="display:flex;gap:8px;margin-bottom:10px">'
+        +'<div style="flex:1;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--pri)">'+icTotal+'</div><div style="font-size:11px;color:var(--mut)">לחצו</div></div>'
+        +'<div style="flex:1;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--pri)">'+iacTotal+'</div><div style="font-size:11px;color:var(--mut)">אישרו (אנדרואיד)</div></div>'
+        +'<div style="flex:1;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--pri)">'+icpTotal+'</div><div style="font-size:11px;color:var(--mut)">השלימו</div></div>'
+        +'</div>'
+        +'<div style="font-size:12px;color:var(--mut);margin:6px 0 4px">לפי בית (לחצו / אישרו / השלימו):</div>'
+        +icRows.sort((a,b)=>((b.h.ic||0)+(b.h.icp||0))-((a.h.ic||0)+(a.h.icp||0))).map(r=>{
+          const code=r.h.c||'';
+          const name=r.h.n&&r.h.n.trim()?esc(r.h.n):'<span style="color:var(--mut);font-style:italic">בית #'+r.hash.slice(0,6)+'</span>';
+          const codeChip=code?'<code style="font-size:10px;background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--mut);margin-right:4px">'+esc(code)+'</code>':'';
+          return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bdr)">'
+            +'<span style="font-size:14px;flex:1">'+name+codeChip+'</span>'
+            +'<span style="font-size:12px;color:var(--mut)">'+(r.h.ic||0)+' / '+(r.h.iac||0)+' / '+(r.h.icp||0)+'</span>'
+            +'</div>';
+        }).join('');
+    } else {
+      instEl.innerHTML='<div style="text-align:center;color:var(--mut);padding:20px">עדיין אין נתוני התקנה. iOS לא מדווח על השלמה.</div>';
     }
 
     // ── top 20 items (decode names from itemFreq values)
