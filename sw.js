@@ -1,4 +1,4 @@
-const CACHE='sl-v82';
+﻿const CACHE='ss-v1';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(clients.claim()));
 self.addEventListener('fetch',e=>{
@@ -11,3 +11,4 @@ self.addEventListener('fetch',e=>{
     }).catch(()=>caches.match(e.request))
   );
 });
+

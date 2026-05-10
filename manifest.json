@@ -1,9 +1,10 @@
-{
+﻿{
   "name": "Shared Shopping",
   "short_name": "Shared Shopping",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#f0faf5",
   "theme_color": "#2dba7a",
   "icons": [
@@ -15,3 +16,4 @@
     }
   ]
 }
+
