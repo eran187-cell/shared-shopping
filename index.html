@@ -841,20 +841,6 @@ body.dark .kpi-tile:hover{box-shadow:0 12px 30px rgba(0,0,0,.5)}
 <body>
 
 <!-- TEST environment indicator + reset button — visible on every screen -->
-<div id="testBanner" style="position:fixed;top:calc(2px + env(safe-area-inset-top, 0px));left:50%;transform:translateX(-50%);z-index:9500;display:flex;gap:6px;align-items:center;font-family:system-ui,sans-serif">
-  
-</div>
-<script>
-document.getElementById('testResetBtn').addEventListener('click',function(){
-  if(!confirm('לאפס את סביבת הטסט? יימחקו houseId, deviceId, וכל ההגדרות המקומיות, ויעלה onboarding מחדש.'))return;
-  Object.keys(localStorage).filter(k=>k.startsWith('sl3_')||k.startsWith('ss_')).forEach(k=>localStorage.removeItem(k));
-  // also unregister the SW so the next load is fully fresh
-  if(navigator.serviceWorker&&navigator.serviceWorker.getRegistrations){
-    navigator.serviceWorker.getRegistrations().then(rs=>{rs.forEach(r=>r.unregister());location.reload();});
-  } else { location.reload(); }
-});
-</script>
-
 <!-- Persistent hamburger (global). Hidden on first-run onboarding; shown on home/list/settings. -->
 <button id="globalMenuBtn" type="button" title="תפריט" data-track="global:menu" style="display:none;position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);right:12px;z-index:8500;width:48px;height:48px;border-radius:12px;border:none;background:transparent;color:var(--txt);font-size:24px;cursor:pointer;font-family:inherit;align-items:center;justify-content:center">☰<span class="menu-badge" aria-hidden="true"></span></button>
 
