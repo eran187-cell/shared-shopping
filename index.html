@@ -1610,10 +1610,11 @@ const APP_VERSION='1.0';
 
 <!-- Admin: catalog management (products + departments) -->
 <div class="overlay" id="catalogAdminOverlay" style="z-index:10000">
-  <div class="sheet" style="max-height:92vh;display:flex;flex-direction:column;width:min(720px,96vw)">
+  <div class="sheet" id="catalogAdminSheet" style="max-height:92vh;display:flex;flex-direction:column;width:min(720px,96vw);transition:width .25s ease, max-width .25s ease, max-height .25s ease">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <h3 style="display:flex;align-items:center;gap:8px;flex:1;margin:0"><span>🧺</span><span>ניהול מוצרים וקטגוריות</span></h3>
-      <button id="catalogAdminClose" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--mut);padding:4px 10px">✕</button>
+      <button id="catalogAdminMax" title="הגדל למסך מלא" style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--mut);padding:4px 8px">⛶</button>
+      <button id="catalogAdminClose" title="סגירה" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--mut);padding:4px 10px">✕</button>
     </div>
     <!-- Pending suggestions from users (auto-populated when users add a "new" product) -->
     <div id="catSuggestionsWrap" style="display:none;background:#fff8e7;border:1.5px solid #f5b041;border-radius:10px;padding:10px;margin-bottom:8px">
@@ -5908,8 +5909,9 @@ _refreshAdminThemeBtn();
       +byDept[d].map(it=>{
         const customBadge=_isCustomProduct(it.name)?' <span style="font-size:9px;background:var(--pri);color:#fff;padding:1px 5px;border-radius:4px;font-weight:700">מותאם</span>':'';
         const origNote=(_isStaticProduct(it.name)&&_origDept(it.name)&&_origDept(it.name)!==it.dept)?(' <span style="font-size:10px;color:var(--mut)" title="מקור: '+esc(_origDept(it.name))+'">↻</span>'):'';
-        return '<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-bottom:1px solid var(--bdr);background:var(--bg)">'
-          +'<span style="flex:1;font-size:13px">'+esc(it.name)+customBadge+origNote+'</span>'
+        return '<div data-cat-row="'+esc(it.name)+'" style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-bottom:1px solid var(--bdr);background:var(--bg)">'
+          +'<span class="cat-name" style="flex:1;font-size:13px">'+esc(it.name)+customBadge+origNote+'</span>'
+          +'<button data-cat-edit="'+esc(it.name)+'" title="ערוך שם" style="padding:3px 7px;border:1px solid var(--bdr);border-radius:6px;background:var(--sur);color:var(--txt);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✏</button>'
           +'<select data-cat-move="'+esc(it.name)+'" style="padding:4px 6px;border:1px solid var(--bdr);border-radius:6px;background:var(--sur);color:var(--txt);font-size:11px;font-family:inherit;min-width:120px">'
             +allDepts.map(d2=>'<option value="'+esc(d2)+'"'+(d2===it.dept?' selected':'')+'>'+esc(d2)+'</option>').join('')
           +'</select>'
@@ -5932,6 +5934,75 @@ _refreshAdminThemeBtn();
         if(!confirm('להסיר את "'+name+'" מהמאגר?\n(אם זה מוצר ממאגר הבסיס, הוא יסומן כמוסר)'))return;
         _deleteProduct(name);
       });
+    });
+    wrap.querySelectorAll('button[data-cat-edit]').forEach(btn=>{
+      btn.addEventListener('click',function(){
+        const oldName=this.dataset.catEdit;
+        const row=wrap.querySelector('[data-cat-row="'+oldName.replace(/"/g,'\\"')+'"]');
+        if(!row)return;
+        // Already in edit mode? toggle off
+        if(row.querySelector('input[data-cat-rename]'))return;
+        const nameSpan=row.querySelector('.cat-name');
+        const currentDept=_acDepts[oldName]||'';
+        // Replace label with editable input + save/cancel buttons
+        nameSpan.innerHTML='<input type="text" data-cat-rename value="'+esc(oldName)+'" style="width:100%;padding:5px 7px;border:1px solid var(--pri);border-radius:6px;background:var(--sur);color:var(--txt);font-size:13px;font-family:inherit"/>';
+        const inp=nameSpan.querySelector('input');
+        // Replace this button with ✓ save, hide the others temporarily
+        this.outerHTML='<button data-cat-save-rename="'+esc(oldName)+'" title="שמור שם חדש" style="padding:3px 7px;border:none;border-radius:6px;background:var(--pri);color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✓</button>'
+          +'<button data-cat-cancel-rename="'+esc(oldName)+'" title="ביטול" style="padding:3px 7px;border:1px solid var(--bdr);border-radius:6px;background:var(--sur);color:var(--txt);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✕</button>';
+        // Focus and select all
+        setTimeout(()=>{inp.focus();inp.select();},20);
+        const saveBtn=row.querySelector('button[data-cat-save-rename]');
+        const cancelBtn=row.querySelector('button[data-cat-cancel-rename]');
+        const doSave=()=>{
+          const newName=(inp.value||'').trim();
+          if(!newName){inp.focus();return;}
+          if(newName===oldName){_renderList();return;}
+          if(_acProducts.includes(newName)){
+            if(!confirm('המוצר "'+newName+'" כבר קיים במאגר. להמשיך?'))return;
+          }
+          _renameProduct(oldName,newName,currentDept);
+        };
+        saveBtn.addEventListener('click',doSave);
+        cancelBtn.addEventListener('click',()=>_renderList());
+        inp.addEventListener('keydown',e=>{
+          if(e.key==='Enter'){e.preventDefault();doSave();}
+          else if(e.key==='Escape'){e.preventDefault();_renderList();}
+        });
+      });
+    });
+  }
+  function _renameProduct(oldName,newName,dept){
+    const oldKey=_keyFor(oldName);
+    const newKey=_keyFor(newName);
+    if(!oldKey||!newKey){alert('שם לא תקין');return;}
+    const isStatic=_isStaticProduct(oldName);
+    const wasCustom=_isCustomProduct(oldName);
+    const ops=[];
+    // Write the new name as an override product
+    ops.push(firebase.database().ref('catalog/products/'+newKey).set({n:newName,d:dept||_OTHER_DEPT||'אחרים',ts:Date.now()}));
+    // Make sure newName isn't in the removed set (in case it was previously deleted)
+    ops.push(firebase.database().ref('catalog/removed/'+newKey).remove().catch(()=>{}));
+    // Clear the OLD entry — if static, mark as removed; if custom, just remove the override
+    if(wasCustom){
+      ops.push(firebase.database().ref('catalog/products/'+oldKey).remove().catch(()=>{}));
+    }
+    if(isStatic){
+      ops.push(firebase.database().ref('catalog/removed/'+oldKey).set({n:oldName,ts:Date.now()}));
+    }
+    Promise.all(ops).then(()=>{
+      _flashFeedback('✓ שונה: "'+oldName+'" → "'+newName+'"',true);
+      // Optimistic local update so the row reflects the new name immediately
+      const i=_acProducts.indexOf(oldName);
+      if(i>=0)_acProducts.splice(i,1);
+      delete _acDepts[oldName];
+      if(!_acProducts.includes(newName))_acProducts.push(newName);
+      _acDepts[newName]=dept;
+      _renderList();
+    }).catch(err=>{
+      const msg=err&&(err.message||err.code)||'שגיאה';
+      _flashFeedback('שינוי שם נכשל: '+msg,false);
+      console.error('[catalog rename]',err);
     });
   }
   function _flashFeedback(msg,isOk){
@@ -6048,6 +6119,37 @@ _refreshAdminThemeBtn();
   if(openBtn)openBtn.addEventListener('click',_open);
   const closeBtn=document.getElementById('catalogAdminClose');
   if(closeBtn)closeBtn.addEventListener('click',_close);
+  // Full-screen toggle for the overlay (handy on desktop with lots of items)
+  const maxBtn=document.getElementById('catalogAdminMax');
+  if(maxBtn){
+    maxBtn.addEventListener('click',function(){
+      const sheet=document.getElementById('catalogAdminSheet');
+      if(!sheet)return;
+      const isFull=sheet.classList.toggle('catalog-fullscreen');
+      if(isFull){
+        sheet.style.width='100vw';
+        sheet.style.maxWidth='100vw';
+        sheet.style.height='100vh';
+        sheet.style.maxHeight='100vh';
+        sheet.style.borderRadius='0';
+        sheet.style.margin='0';
+        maxBtn.textContent='🗗';
+        maxBtn.title='חזרה לתצוגה רגילה';
+      } else {
+        sheet.style.width='';
+        sheet.style.maxWidth='';
+        sheet.style.height='';
+        sheet.style.maxHeight='';
+        sheet.style.borderRadius='';
+        sheet.style.margin='';
+        // restore the original constraints
+        sheet.style.width='min(720px,96vw)';
+        sheet.style.maxHeight='92vh';
+        maxBtn.textContent='⛶';
+        maxBtn.title='הגדל למסך מלא';
+      }
+    });
+  }
   const addProdBtn=document.getElementById('catAddProdBtn');
   if(addProdBtn)addProdBtn.addEventListener('click',_addProduct);
   const addDeptBtn=document.getElementById('catAddDeptBtn');
